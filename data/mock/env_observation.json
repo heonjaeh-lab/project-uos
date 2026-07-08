@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-07-08T14:00:00+09:00",
+  "lat": 37.48305,
+  "lon": 127.11465,
+  "air_temp_c": 32.4,
+  "humidity_pct": 68.0,
+  "wind_ms": 1.3,
+  "uv_index": 8.5,
+  "pm10": 42.0,
+  "pm25": 21.0,
+  "road_surface_temp_c": 51.7,
+  "season": "summer"
+}

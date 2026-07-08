@@ -1,0 +1,9 @@
+{
+  "breed": "poodle",
+  "age_years": 4.5,
+  "weight_kg": 6.2,
+  "coat_length": "medium",
+  "brachycephalic": false,
+  "size_class": "small",
+  "conditions": ["patella"]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "surface60",
+  "description": "노면 60℃ 단일 극단: 나머지 요소는 온건하지만 하드 세이프티 규칙(노면 60℃+ = 화상 임박)으로 즉시 red 승격, 지배요인 surface.",
+  "missing": [],
+  "env": {
+    "timestamp": "2026-07-25T15:00:00+09:00",
+    "lat": 37.48305,
+    "lon": 127.11465,
+    "air_temp_c": 25.0,
+    "humidity_pct": 50.0,
+    "wind_ms": 1.0,
+    "uv_index": 3.0,
+    "pm10": 20.0,
+    "pm25": 10.0,
+    "road_surface_temp_c": 60.0,
+    "season": "summer"
+  },
+  "expect": {
+    "level": "red",
+    "dominant": "surface",
+    "hard_rule_contains": "surface",
+    "partial_data": false
+  }
+}

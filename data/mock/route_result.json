@@ -1,0 +1,41 @@
+{
+  "node_path": [287284026, 8428135385, 11153272896, 11153308709, 11153308710],
+  "polyline": {
+    "type": "LineString",
+    "coordinates": [
+      [127.1140605, 37.4823175],
+      [127.1144635, 37.4830279],
+      [127.1149254, 37.4829927],
+      [127.115306, 37.4833446],
+      [127.1148243, 37.4840808]
+    ]
+  },
+  "distance_m": 373.262,
+  "est_time_min": 5.0,
+  "avg_shade_ratio": 0.45,
+  "max_risk_level": "yellow",
+  "pois_on_route": [
+    {
+      "poi_type": "park",
+      "lat": 37.4831,
+      "lon": 127.115,
+      "name": "송파나루 근린공원",
+      "open_now": true
+    }
+  ],
+  "warnings": [
+    {
+      "level": "warning",
+      "category": "reroute",
+      "message": "앞쪽 도로굴착 공사로 경로를 변경했어요.",
+      "location": { "lat": 37.48335, "lon": 127.1153 }
+    },
+    {
+      "level": "danger",
+      "category": "surface",
+      "message": "노면온도가 높아 발바닥 화상에 주의하세요.",
+      "location": null
+    }
+  ],
+  "reason": null
+}

@@ -1,0 +1,22 @@
+{
+  "name": "winter_cold",
+  "description": "겨울 저온: 기온 -6℃. 겨울 모드는 heat 슬롯을 저체온(cold)으로 대체하고 노면·자외선 가중을 낮춘다(빙판은 라우팅 M3에서 회피). heat 슬롯 기여>0, partial_data=False.",
+  "missing": [],
+  "env": {
+    "timestamp": "2026-01-15T08:00:00+09:00",
+    "lat": 37.48305,
+    "lon": 127.11465,
+    "air_temp_c": -6.0,
+    "humidity_pct": 40.0,
+    "wind_ms": 2.5,
+    "uv_index": 1.0,
+    "pm10": 40.0,
+    "pm25": 20.0,
+    "road_surface_temp_c": 10.0,
+    "season": "winter"
+  },
+  "expect": {
+    "partial_data": false,
+    "heat_component_positive": true
+  }
+}

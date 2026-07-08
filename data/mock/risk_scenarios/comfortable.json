@@ -1,0 +1,22 @@
+{
+  "name": "comfortable",
+  "description": "쾌적: 기온 18℃ / 습도 50% / 노면 22℃ / UV 2 / 미세먼지 낮음 → green.",
+  "missing": [],
+  "env": {
+    "timestamp": "2026-05-10T09:00:00+09:00",
+    "lat": 37.48305,
+    "lon": 127.11465,
+    "air_temp_c": 18.0,
+    "humidity_pct": 50.0,
+    "wind_ms": 1.5,
+    "uv_index": 2.0,
+    "pm10": 15.0,
+    "pm25": 8.0,
+    "road_surface_temp_c": 22.0,
+    "season": "summer"
+  },
+  "expect": {
+    "level": "green",
+    "partial_data": false
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "_note": "송파구 실 OSM 부분 발췌(node id·좌표·length_m 는 실측). shade_ratio/hazards/slope_pct/has_stairs/surface_type 는 M1·크라우드소싱 채우기 전의 mock 예시.",
+  "nodes": [
+    { "id": 287284026, "lat": 37.4823175, "lon": 127.1140605, "has_streetlight": true },
+    { "id": 8428135385, "lat": 37.4830279, "lon": 127.1144635, "has_streetlight": false },
+    { "id": 11153272896, "lat": 37.4829927, "lon": 127.1149254, "has_streetlight": false },
+    { "id": 11153308709, "lat": 37.4833446, "lon": 127.115306, "has_streetlight": true },
+    { "id": 11153308710, "lat": 37.4840808, "lon": 127.1148243, "has_streetlight": false }
+  ],
+  "edges": [
+    {
+      "u": 287284026,
+      "v": 8428135385,
+      "length_m": 186.904,
+      "shade_ratio": 0.5,
+      "surface_type": "paved",
+      "hazards": [],
+      "slope_pct": 1.2,
+      "has_stairs": false,
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [127.1140605, 37.4823175],
+          [127.1139809, 37.4827145],
+          [127.1142697, 37.4823643],
+          [127.1140792, 37.4827998],
+          [127.1142602, 37.4828356],
+          [127.1143391, 37.4829201],
+          [127.1144635, 37.4830279]
+        ]
+      }
+    },
+    {
+      "u": 8428135385,
+      "v": 11153272896,
+      "length_m": 40.944,
+      "shade_ratio": 0.3,
+      "surface_type": "paved",
+      "hazards": [],
+      "slope_pct": 0.4,
+      "has_stairs": false,
+      "geometry": null
+    },
+    {
+      "u": 11153272896,
+      "v": 11153308709,
+      "length_m": 51.743,
+      "shade_ratio": 0.6,
+      "surface_type": "paved",
+      "hazards": [],
+      "slope_pct": 0.8,
+      "has_stairs": false,
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [127.1149254, 37.4829927],
+          [127.1151638, 37.4831839],
+          [127.115306, 37.4833446]
+        ]
+      }
+    },
+    {
+      "u": 11153308709,
+      "v": 11153308710,
+      "length_m": 93.671,
+      "shade_ratio": 0.35,
+      "surface_type": "asphalt",
+      "hazards": ["chloride"],
+      "slope_pct": 2.1,
+      "has_stairs": false,
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [127.115306, 37.4833446],
+          [127.1151889, 37.4834154],
+          [127.1148243, 37.4840808]
+        ]
+      }
+    }
+  ]
+}

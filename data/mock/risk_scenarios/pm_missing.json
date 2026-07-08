@@ -1,0 +1,23 @@
+{
+  "name": "pm_missing",
+  "description": "미세먼지 센서 결측: env.pm10/pm25는 스키마 필수라 자리표시값이며 missing=[pm]로 결측을 신호한다. pm 기여는 중립(0), partial_data=True, pm 하드규칙은 발동하지 않는다.",
+  "missing": ["pm"],
+  "env": {
+    "timestamp": "2026-07-20T11:00:00+09:00",
+    "lat": 37.48305,
+    "lon": 127.11465,
+    "air_temp_c": 28.0,
+    "humidity_pct": 55.0,
+    "wind_ms": 1.2,
+    "uv_index": 5.0,
+    "pm10": 30.0,
+    "pm25": 12.0,
+    "road_surface_temp_c": 40.0,
+    "season": "summer"
+  },
+  "expect": {
+    "partial_data": true,
+    "pm_component_zero": true,
+    "hard_rule_absent": "pm"
+  }
+}

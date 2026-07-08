@@ -1,0 +1,13 @@
+# 조심해야댕 연산 엔진 — 설치된 버전 고정(.venv, Python 3.13)
+# 결정론 엔진 코어(M0~M4)용. 런타임 LLM 의존성 없음.
+
+osmnx==2.1.0        # 송파구 보행 네트워크 OSM 수집·GraphML 캐시
+shapely==2.1.2      # 지오메트리 연산(폴리곤 교차 등, M1/M4)
+pyproj==3.7.2       # 좌표계 변환(WGS84 등)
+astral==3.2         # 태양 위치(고도·방위) 계산 — M1 그늘
+networkx==3.6.1     # 그래프 표현·최단경로(A*/Dijkstra) — M3
+numpy==2.5.1        # 수치 연산
+pandas==3.0.3       # 표 형태 데이터 처리
+pydantic==2.13.4    # 스키마(BaseModel) — M0
+pytest==9.1.1       # 테스트
+geojson==3.3.0      # GeoJSON 입출력 헬퍼

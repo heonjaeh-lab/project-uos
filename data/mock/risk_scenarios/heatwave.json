@@ -1,0 +1,23 @@
+{
+  "name": "heatwave",
+  "description": "폭염: 기온 35℃ / 습도 70% / 노면 55℃ / UV 9 → red, 지배요인 heat 또는 surface. 하드규칙 없이 가중합 점수만으로 red.",
+  "missing": [],
+  "env": {
+    "timestamp": "2026-07-25T14:00:00+09:00",
+    "lat": 37.48305,
+    "lon": 127.11465,
+    "air_temp_c": 35.0,
+    "humidity_pct": 70.0,
+    "wind_ms": 1.0,
+    "uv_index": 9.0,
+    "pm10": 40.0,
+    "pm25": 20.0,
+    "road_surface_temp_c": 55.0,
+    "season": "summer"
+  },
+  "expect": {
+    "level": "red",
+    "dominant_in": ["heat", "surface"],
+    "partial_data": false
+  }
+}

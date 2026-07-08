@@ -1,0 +1,23 @@
+[
+  {
+    "poi_type": "park",
+    "lat": 37.4831,
+    "lon": 127.115,
+    "name": "송파나루 근린공원",
+    "open_now": true
+  },
+  {
+    "poi_type": "water_fountain",
+    "lat": 37.4835,
+    "lon": 127.1149,
+    "name": "공원 음수대 A",
+    "open_now": null
+  },
+  {
+    "poi_type": "animal_hospital",
+    "lat": 37.4825,
+    "lon": 127.1142,
+    "name": "송파 동물병원",
+    "open_now": true
+  }
+]

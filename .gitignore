@@ -1,1 +1,22 @@
 .DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# 데이터 캐시 (OSM 그래프·건물·POI 등) / 데모 산출물 (재생성 가능)
+data/cache/
+data/demo/
+
+# osmnx 기본 HTTP 캐시 (재생성 가능, 대용량)
+/cache/
+
+# API 키·비밀 (절대 커밋 금지)
+.env
+.env.local
+*.key
+secrets/
