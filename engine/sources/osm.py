@@ -25,15 +25,19 @@ _BUILDINGS_CACHE = f"{CACHE_DIR}/songpa_buildings.json"
 _TREES_CACHE = f"{CACHE_DIR}/songpa_trees.json"
 _POIS_CACHE = f"{CACHE_DIR}/songpa_pois.json"
 
-# 매핑: OSM 태그 → POIType
+# 매핑: OSM 태그 → POIType (급수대/음수대는 여러 태그로 흩어져 있어 폭넓게 수집)
 _POI_TAGS = {
-    "amenity": ["toilets", "drinking_water", "veterinary"],
+    "amenity": ["toilets", "drinking_water", "veterinary", "water_point"],
     "leisure": ["park", "dog_park"],
     "shop": ["pet"],
+    "man_made": ["water_tap", "drinking_fountain"],
 }
 _POI_MAP = {
     ("amenity", "toilets"): POIType.toilet,
     ("amenity", "drinking_water"): POIType.water_fountain,
+    ("amenity", "water_point"): POIType.water_fountain,
+    ("man_made", "water_tap"): POIType.water_fountain,
+    ("man_made", "drinking_fountain"): POIType.water_fountain,
     ("amenity", "veterinary"): POIType.animal_hospital,
     ("leisure", "park"): POIType.park,
     ("leisure", "dog_park"): POIType.park,
@@ -164,7 +168,7 @@ def fetch_pois(force: bool = False) -> list[POI]:
         if geom is None or geom.is_empty:
             continue
         poi_type = None
-        for key in ("amenity", "leisure", "shop"):
+        for key in ("amenity", "leisure", "shop", "man_made"):
             val = row.get(key)
             if val is not None and (key, val) in _POI_MAP:
                 poi_type = _POI_MAP[(key, val)]
