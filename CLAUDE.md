@@ -27,3 +27,4 @@
 | 2026-07-08 | 강수(비) 게이트: EnvObservation 강수필드 + walk_advisory(비/눈→STOP) + 시간별 반영 | engine/schemas, engine/risk/advisory, engine/sources/weather | "비 오면 산책 막기" 요구. 테스트 70개 |
 | 2026-07-08 | V-World 실측 건물높이 연동(engine/sources/vworld, 11.7만 동) → 경로 그늘 0.51→0.78 | engine/sources | OSM 휴리스틱 대비 그늘 정확도 대폭↑. 이상치 높이 클램프(≤555m). .env 도메인 필요 |
 | 2026-07-08 | GPS 로컬 라우팅 정식 기능(engine/sources/local_routing): 임의 좌표 주변 보행망+건물 온디맨드+타일캐시 → 서울 전역 지원. 기상 격자변환(latlon_to_grid)+build_env_at로 임의좌표 기상 일반화 | engine/sources | "서울 어디서든 GPS 경로" 요구. 콜드~20s/캐시 즉시. 테스트 76개 |
+| 2026-07-08 | 작동 앱 프로토타입(docs/app, scripts/make_app.py): '안전한 산책 동반자' 디자인 1:1 재현 + 실데이터 구동(홈/경로/산책중/완료). 시간별 위험지수·다중경로선택·GPS·비게이트·리라우팅 신규 UI | docs/app | 사용자 제작 UI에 엔진 기능 통합. Google폰트+로컬이미지라 파일로 직접 열기(Artifact 아님) |
