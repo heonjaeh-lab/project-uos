@@ -100,6 +100,38 @@ def fetch_songpa_buildings(force: bool = False, bbox=SONGPA_BBOX, max_pages: int
     return buildings
 
 
+def fetch_bbox(bbox, cache_path: str | None = None, max_pages: int = 20,
+               force: bool = False) -> list[Building]:
+    """임의 bbox(minlon,minlat,maxlon,maxlat)의 V-World 건물 → Building(실측 높이).
+
+    GPS 주변 로컬 라우팅용. cache_path 주면 타일 캐시(재방문 지역 즉시). 이상치 높이 클램프.
+    키/도메인 없거나 실패 시 []를 반환(엔진은 죽지 않는다).
+    """
+    if cache_path and not force and os.path.exists(cache_path):
+        with open(cache_path, encoding="utf-8") as f:
+            data = json.load(f)
+        return [Building(footprint=tuple((float(p[0]), float(p[1])) for p in b["footprint"]),
+                         height_m=float(b["height_m"]), id=b.get("id")) for b in data]
+    key, dom = config.get_key("VWORLD_KEY"), config.get_key("VWORLD_DOMAIN")
+    if not key:
+        return []
+    feats, total = _page(bbox, 1, key, dom)
+    all_feats = list(feats)
+    for pg in range(2, min(total, max_pages) + 1):
+        f, _ = _page(bbox, pg, key, dom)
+        if not f:
+            break
+        all_feats.extend(f)
+        time.sleep(0.05)
+    buildings = [b for b in _to_buildings(all_feats) if b.height_m <= _MAX_REAL_HEIGHT_M]
+    if cache_path:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump([{"footprint": [list(p) for p in b.footprint],
+                        "height_m": b.height_m, "id": b.id} for b in buildings], f)
+    return buildings
+
+
 def _dump_cache(buildings: list[Building]) -> None:
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
     with open(CACHE, "w", encoding="utf-8") as f:

@@ -37,6 +37,31 @@ def _season(month: int) -> Season:
     return Season.shoulder
 
 
+def latlon_to_grid(lat: float, lon: float) -> tuple[int, int]:
+    """WGS84 → 기상청 단기예보 격자(nx, ny). LCC 투영(기상청 공식).
+
+    임의 서울/전국 좌표에서 그 지점의 예보를 받기 위해 사용한다.
+    (송파 중심 ≈ (62, 126)이 되도록 검증.)
+    """
+    import math
+    RE, GRID = 6371.00877, 5.0
+    SLAT1, SLAT2, OLON, OLAT, XO, YO = 30.0, 60.0, 126.0, 38.0, 43, 136
+    D = math.pi / 180.0
+    re = RE / GRID
+    s1, s2, ol, oa = SLAT1 * D, SLAT2 * D, OLON * D, OLAT * D
+    sn = math.log(math.cos(s1) / math.cos(s2)) / math.log(
+        math.tan(math.pi * 0.25 + s2 * 0.5) / math.tan(math.pi * 0.25 + s1 * 0.5))
+    sf = math.pow(math.tan(math.pi * 0.25 + s1 * 0.5), sn) * math.cos(s1) / sn
+    ro = re * sf / math.pow(math.tan(math.pi * 0.25 + oa * 0.5), sn)
+    ra = re * sf / math.pow(math.tan(math.pi * 0.25 + lat * D * 0.5), sn)
+    theta = lon * D - ol
+    theta = (theta + math.pi) % (2 * math.pi) - math.pi
+    theta *= sn
+    nx = int(ra * math.sin(theta) + XO + 0.5)
+    ny = int(ro - ra * math.cos(theta) + YO + 0.5)
+    return nx, ny
+
+
 def fetch_air_quality(station: str = AIR_STATION) -> dict | None:
     """송파구 측정소 실시간 PM10/PM2.5(㎍/㎥). 키/네트워크 실패 시 None."""
     key = config.get_key("DATA_GO_KR_KEY")
@@ -197,15 +222,18 @@ def hourly_risk_series(when: dt.datetime | None = None, hours: int = 12,
     return out
 
 
-def build_songpa_env(when: dt.datetime | None = None) -> tuple[EnvObservation, set[str]]:
-    """송파구 실데이터로 EnvObservation 구성. 반환: (env, missing).
+def build_env_at(lat: float, lon: float,
+                 when: dt.datetime | None = None) -> tuple[EnvObservation, set[str]]:
+    """임의 좌표의 실측 환경 → (EnvObservation, missing).
 
-    실측: 기온·습도·풍속(단기예보) + PM10/PM2.5(에어코리아).
+    실측: 기온·습도·풍속·강수(해당 격자 단기예보) + PM10/PM2.5(에어코리아, 도시 내
+    거의 균일하므로 서울 대표 관측소값 사용 — 지점별 정밀화는 최근접 관측소로 확장 가능).
     결측: 자외선(uv, API 미승인) · 노면온도(surface, RWIS 없음) → missing 집합.
     """
     when = when or dt.datetime.now(SEOUL)
+    nx, ny = latlon_to_grid(lat, lon)
     air = fetch_air_quality() or {}
-    fcst = fetch_forecast(when=when) or {}
+    fcst = fetch_forecast(nx=nx, ny=ny, when=when) or {}
     missing: set[str] = set()
 
     air_temp = fcst.get("air_temp_c")
@@ -230,7 +258,7 @@ def build_songpa_env(when: dt.datetime | None = None) -> tuple[EnvObservation, s
 
     env = EnvObservation(
         timestamp=when,
-        lat=SONGPA_CENTER[0], lon=SONGPA_CENTER[1],
+        lat=lat, lon=lon,
         air_temp_c=air_temp, humidity_pct=humidity, wind_ms=wind,
         uv_index=0.0,                    # missing → 중립
         pm10=pm10, pm25=pm25,
@@ -244,5 +272,11 @@ def build_songpa_env(when: dt.datetime | None = None) -> tuple[EnvObservation, s
     return env, missing
 
 
-__all__ = ["fetch_air_quality", "fetch_forecast", "build_songpa_env",
+def build_songpa_env(when: dt.datetime | None = None) -> tuple[EnvObservation, set[str]]:
+    """송파구 중심 기준 실데이터 환경(build_env_at의 편의 래퍼)."""
+    return build_env_at(SONGPA_CENTER[0], SONGPA_CENTER[1], when)
+
+
+__all__ = ["fetch_air_quality", "fetch_forecast", "fetch_forecast_series",
+           "hourly_risk_series", "build_env_at", "build_songpa_env", "latlon_to_grid",
            "SONGPA_NX", "SONGPA_NY", "SONGPA_CENTER"]

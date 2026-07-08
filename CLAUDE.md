@@ -26,3 +26,4 @@
 | 2026-07-08 | 대화형 지도 아티팩트(다중경로 클릭선택·GPS 출발·시간별 스트립) + UI 전체 명세(11화면) | docs/오늘의경로_지도.html, docs/UI명세.md | 디자인 착수용 |
 | 2026-07-08 | 강수(비) 게이트: EnvObservation 강수필드 + walk_advisory(비/눈→STOP) + 시간별 반영 | engine/schemas, engine/risk/advisory, engine/sources/weather | "비 오면 산책 막기" 요구. 테스트 70개 |
 | 2026-07-08 | V-World 실측 건물높이 연동(engine/sources/vworld, 11.7만 동) → 경로 그늘 0.51→0.78 | engine/sources | OSM 휴리스틱 대비 그늘 정확도 대폭↑. 이상치 높이 클램프(≤555m). .env 도메인 필요 |
+| 2026-07-08 | GPS 로컬 라우팅 정식 기능(engine/sources/local_routing): 임의 좌표 주변 보행망+건물 온디맨드+타일캐시 → 서울 전역 지원. 기상 격자변환(latlon_to_grid)+build_env_at로 임의좌표 기상 일반화 | engine/sources | "서울 어디서든 GPS 경로" 요구. 콜드~20s/캐시 즉시. 테스트 76개 |
