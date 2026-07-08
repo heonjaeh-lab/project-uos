@@ -11,6 +11,7 @@ import json
 import math
 import os
 
+from engine.risk import walk_advisory
 from engine.routing import nearest_node, recommend_routes
 from engine.sources import osm
 from engine.sources.real_graph import build_real_routing_graph
@@ -73,6 +74,7 @@ def main():
                         [round(float(G.nodes[v]["x"]), 6), round(float(G.nodes[v]["y"]), 6)]])
 
     hourly = hourly_risk_series(hours=12)
+    adv = walk_advisory(env, missing=missing) if env else None
     data = {
         "bbox": bbox,
         "gps": {"lon": GPS_LATLON[1], "lat": GPS_LATLON[0]},
@@ -85,9 +87,13 @@ def main():
             "now_score": hourly[0]["score"] if hourly else None,
             "now_level": hourly[0]["level"] if hourly else None,
             "now_dominant": hourly[0]["dominant"] if hourly else None,
+            "advisory": adv.status if adv else None,
+            "advisory_reason": adv.reason if adv else None,
+            "rain": adv.rain if adv else False,
             "air_temp_c": env.air_temp_c if env else None,
             "humidity_pct": env.humidity_pct if env else None,
             "pm10": env.pm10 if env else None,
+            "precip_prob_pct": env.precip_prob_pct if env else None,
         },
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

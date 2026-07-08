@@ -31,5 +31,18 @@ class EnvObservation(BaseModel):
     )
     season: Season = Field(..., description="계절 모드 {summer|winter|shoulder}")
 
+    # 강수 — 비 오면 산책을 막는 게이트용(기상청 단기예보 PTY/POP/PCP).
+    # 하위 호환을 위해 모두 선택(기본=강수 없음). 데이터 파이프라인이 채운다.
+    precip_type_code: int = Field(
+        0, description="강수형태 PTY {0:없음,1:비,2:비/눈,3:눈,4:소나기}"
+    )
+    precip_prob_pct: float | None = Field(
+        None, ge=0.0, le=100.0, description="강수확률 POP(%)"
+    )
+    precip_mm: float | None = Field(None, ge=0.0, description="1시간 강수량(mm)")
+    sky_code: int | None = Field(
+        None, description="하늘상태 SKY {1:맑음,3:구름많음,4:흐림}"
+    )
+
 
 __all__ = ["EnvObservation"]

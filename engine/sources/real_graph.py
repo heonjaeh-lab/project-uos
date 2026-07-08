@@ -49,7 +49,11 @@ def build_real_routing_graph(
             env, missing = build_songpa_env(when)
         except Exception:
             env, missing = None, set()  # 실패 시 mock 폴백
-    buildings = osm.fetch_buildings()  # 캐시에서 로드
+    # 건물: V-World 실측 높이 캐시가 있으면 우선(그늘 정확도↑), 없으면 OSM.
+    import os as _os
+
+    from engine.sources import vworld
+    buildings = vworld._load_cache() if _os.path.exists(vworld.CACHE) else osm.fetch_buildings()
     trees = osm.fetch_trees()
     G = build_routing_graph(
         buildings=buildings,

@@ -24,3 +24,5 @@
 | 2026-07-08 | 기상·대기질 실데이터 연결 (engine/sources/weather): 단기예보 기온·습도·풍속 + 에어코리아 PM → 위험지수 실측 구동 | engine/sources | API 키는 .env(gitignore). UV·노면온도는 결측 중립처리(자외선 API 미승인, RWIS 없음) |
 | 2026-07-08 | 시간별 위험지수(hourly_risk_series) + 다중 경로 추천(recommend_routes 그늘/균형/최단) + 건물높이 면적 휴리스틱(그늘 47→56%) | engine/sources/weather, engine/routing | 위험지수 시간 단위 갱신·경로 다안 선택·그늘 최적화 요구 반영. 회귀 테스트 추가(63개) |
 | 2026-07-08 | 대화형 지도 아티팩트(다중경로 클릭선택·GPS 출발·시간별 스트립) + UI 전체 명세(11화면) | docs/오늘의경로_지도.html, docs/UI명세.md | 디자인 착수용 |
+| 2026-07-08 | 강수(비) 게이트: EnvObservation 강수필드 + walk_advisory(비/눈→STOP) + 시간별 반영 | engine/schemas, engine/risk/advisory, engine/sources/weather | "비 오면 산책 막기" 요구. 테스트 70개 |
+| 2026-07-08 | V-World 실측 건물높이 연동(engine/sources/vworld, 11.7만 동) → 경로 그늘 0.51→0.78 | engine/sources | OSM 휴리스틱 대비 그늘 정확도 대폭↑. 이상치 높이 클램프(≤555m). .env 도메인 필요 |

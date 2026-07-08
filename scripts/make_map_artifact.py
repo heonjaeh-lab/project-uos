@@ -41,6 +41,15 @@ HTML = r"""<style>
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}
 .chip{background:var(--panel);border:1px solid var(--hair);border-radius:999px;padding:5px 11px;
   font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.chip b{color:var(--ink)}
+/* 산책 게이트 배너 */
+.advisory{display:flex;align-items:center;gap:11px;border-radius:13px;padding:12px 16px;margin-bottom:12px;
+  border:1.5px solid;box-shadow:var(--shadow)}
+.advisory .ic{font-size:22px;line-height:1}
+.advisory .txt{font-size:14px;font-weight:800}
+.advisory .rs{font-size:12.5px;font-weight:600;opacity:.9}
+.advisory.go{background:var(--accent-weak);border-color:var(--good);color:var(--ink)}
+.advisory.caution{background:rgba(217,119,6,.12);border-color:var(--warn);color:var(--ink)}
+.advisory.stop{background:rgba(220,38,38,.13);border-color:var(--bad);color:var(--ink)}
 /* 시간별 위험지수 스트립 */
 .hourly{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:12px 14px 10px;
   box-shadow:var(--shadow);margin-bottom:12px}
@@ -83,6 +92,8 @@ svg{width:100%;height:auto;display:block;border-radius:10px}
       <span class="sig" id="sig"></span></div>
     <div class="chips" id="chips"></div>
   </div>
+
+  <div class="advisory" id="advisory"></div>
 
   <div class="hourly"><h4>시간별 위험지수 (실측 예보 기반 · 매시간 갱신)</h4><div class="hbars" id="hbars"></div></div>
 
@@ -185,7 +196,14 @@ document.getElementById("score").textContent=m.now_score??"–";
 document.getElementById("sig").className="sig "+(m.now_level||"green");
 document.getElementById("sub").textContent=`송파구 · 주요인 ${m.now_dominant||"-"} · 실측`;
 document.getElementById("chips").innerHTML=
-  `<span class="chip">기온 <b>${m.air_temp_c}℃</b></span><span class="chip">습도 <b>${m.humidity_pct}%</b></span><span class="chip">PM10 <b>${m.pm10}</b></span>`;
+  `<span class="chip">기온 <b>${m.air_temp_c}℃</b></span><span class="chip">습도 <b>${m.humidity_pct}%</b></span><span class="chip">PM10 <b>${m.pm10}</b></span>`+
+  (m.precip_prob_pct!=null?`<span class="chip">강수확률 <b>${Math.round(m.precip_prob_pct)}%</b></span>`:``);
+
+// 산책 게이트 배너 (비 오면 STOP)
+const AD={go:{ic:"🐾",t:"지금 산책하기 좋아요"},caution:{ic:"⚠️",t:"주의가 필요해요"},stop:{ic:"🚫",t:"지금은 산책을 미뤄주세요"}};
+const ad=AD[m.advisory]||AD.go;const ab=document.getElementById("advisory");
+ab.className="advisory "+(m.advisory||"go");
+ab.innerHTML=`<span class="ic">${ad.ic}</span><div><div class="txt">${ad.t}</div><div class="rs">${m.advisory_reason||""}</div></div>`;
 
 drawHourly();select(0);
 </script>

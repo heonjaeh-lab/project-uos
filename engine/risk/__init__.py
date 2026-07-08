@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from engine.risk.advisory import WalkAdvisory, walk_advisory
 from engine.risk.risk_index import (
     RiskResult,
     classify_level,
@@ -19,4 +20,6 @@ __all__ = [
     "compute_risk",
     "classify_level",
     "recommend_windows",
+    "WalkAdvisory",
+    "walk_advisory",
 ]

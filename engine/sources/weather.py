@@ -102,7 +102,18 @@ def _nearest_forecast(items: list[dict], when: dt.datetime) -> dict:
         except (TypeError, ValueError):
             return None
     return {"air_temp_c": _f(vals.get("TMP")), "humidity_pct": _f(vals.get("REH")),
-            "wind_ms": _f(vals.get("WSD")), "fcst_time": best}
+            "wind_ms": _f(vals.get("WSD")), "fcst_time": best,
+            "pty": int(_f(vals.get("PTY")) or 0), "pop": _f(vals.get("POP")),
+            "pcp_mm": _pcp_mm(vals.get("PCP")), "sky": int(_f(vals.get("SKY")) or 0) or None}
+
+
+def _pcp_mm(v) -> float | None:
+    """PCP 문자열('강수없음'/'1.0mm'/'1mm 미만'…)에서 mm 수치를 최대한 뽑는다."""
+    if v is None or "없음" in str(v):
+        return None
+    import re
+    m = re.search(r"[-+]?\d*\.?\d+", str(v))
+    return float(m.group()) if m else None
 
 
 def fetch_forecast_series(nx: int = SONGPA_NX, ny: int = SONGPA_NY,
@@ -140,7 +151,9 @@ def fetch_forecast_series(nx: int = SONGPA_NX, ny: int = SONGPA_NY,
                     continue
                 v = by_time[stamp]
                 series.append({"stamp": stamp, "air_temp_c": _f(v.get("TMP")),
-                               "humidity_pct": _f(v.get("REH")), "wind_ms": _f(v.get("WSD"))})
+                               "humidity_pct": _f(v.get("REH")), "wind_ms": _f(v.get("WSD")),
+                               "pty": int(_f(v.get("PTY")) or 0), "pop": _f(v.get("POP")),
+                               "pcp_mm": _pcp_mm(v.get("PCP"))})
                 if len(series) >= hours:
                     break
             if series:
@@ -155,7 +168,7 @@ def hourly_risk_series(when: dt.datetime | None = None, hours: int = 12,
     반환: [{hour:"HH", score, level, dominant}] · 위험지수는 날짜가 아니라 **시간 단위**로
     갱신되어야 하므로 이 함수가 홈 화면의 시간대별 신호등/권장 시간대를 채운다.
     """
-    from engine.risk import compute_risk
+    from engine.risk import compute_risk, walk_advisory
     from engine.schemas import RiskParams
     params = params or RiskParams()
     when = when or dt.datetime.now(SEOUL)
@@ -172,11 +185,15 @@ def hourly_risk_series(when: dt.datetime | None = None, hours: int = 12,
             timestamp=t, lat=SONGPA_CENTER[0], lon=SONGPA_CENTER[1],
             air_temp_c=pt["air_temp_c"], humidity_pct=pt["humidity_pct"] or 50.0,
             wind_ms=pt["wind_ms"] or 1.0, uv_index=0.0, pm10=pm10, pm25=pm25,
-            road_surface_temp_c=pt["air_temp_c"], season=_season(t.month))
+            road_surface_temp_c=pt["air_temp_c"], season=_season(t.month),
+            precip_type_code=pt.get("pty") or 0, precip_prob_pct=pt.get("pop"),
+            precip_mm=pt.get("pcp_mm"))
         r = compute_risk(env, params, missing={"uv", "surface"})
+        adv = walk_advisory(env, r)  # 강수+위험 합산 게이트
         out.append({"hour": pt["stamp"][8:10], "score": round(r.score),
-                    "level": r.level.value, "dominant": r.dominant,
-                    "temp": pt["air_temp_c"]})
+                    "level": r.level.value, "dominant": r.dominant, "temp": pt["air_temp_c"],
+                    "pty": pt.get("pty") or 0, "pop": pt.get("pop"),
+                    "advisory": adv.status, "rain": adv.rain})
     return out
 
 
@@ -219,6 +236,10 @@ def build_songpa_env(when: dt.datetime | None = None) -> tuple[EnvObservation, s
         pm10=pm10, pm25=pm25,
         road_surface_temp_c=air_temp,    # placeholder, missing → 중립
         season=_season(when.month),
+        precip_type_code=fcst.get("pty") or 0,   # 강수형태(비 게이트)
+        precip_prob_pct=fcst.get("pop"),
+        precip_mm=fcst.get("pcp_mm"),
+        sky_code=fcst.get("sky"),
     )
     return env, missing
 
