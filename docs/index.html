@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>조심해야댕 — 반려견 안전 산책</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:'Gothic A1',sans-serif;background:#F1EBE0;color:#2E2A27;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:56px 20px 40px}
+.brand{font-family:'Jua';font-size:44px;color:#F1592A;letter-spacing:-1px}
+.tag{font-weight:700;font-size:15px;color:#7d6a56;margin-top:8px;text-align:center;line-height:1.5}
+.grid{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-top:36px;max-width:760px}
+.card{width:340px;background:#fff;border:1.5px solid #F0E4D2;border-radius:22px;padding:24px;text-decoration:none;color:inherit;
+  box-shadow:0 8px 24px rgba(150,110,60,.08);transition:transform .12s,box-shadow .12s}
+.card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(150,110,60,.14)}
+.ic{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:#FDEDE4}
+.ct{font-weight:900;font-size:19px;margin-top:14px}
+.cd{font-weight:600;font-size:13.5px;color:#7d6a56;margin-top:6px;line-height:1.55}
+.go{display:inline-flex;align-items:center;gap:5px;margin-top:14px;font-weight:800;font-size:13.5px;color:#F1592A}
+.foot{margin-top:40px;font-size:12.5px;color:#9A928B;text-align:center;line-height:1.7}
+.foot a{color:#C24E24;font-weight:700}
+</style></head><body>
+  <div class="brand">조심해야댕</div>
+  <div class="tag">견종·건강 + 실시간 환경(그늘·노면온도·대기질)을 반영한<br>반려견 안전 산책 경로 추천 · 송파구 실데이터</div>
+  <div class="grid">
+    <a class="card" href="app/">
+      <div class="ic">🐾</div>
+      <div class="ct">앱 프로토타입</div>
+      <div class="cd">홈·경로·산책중·기록·마이. 실측 위험지수·시간별·다중경로·비 게이트까지 작동하는 데모.</div>
+      <span class="go">열어보기 →</span>
+    </a>
+    <a class="card" href="오늘의경로_지도.html">
+      <div class="ic">🗺️</div>
+      <div class="ct">오늘의 경로 지도</div>
+      <div class="cd">송파구 실 보행망 + V-World 실측 건물 그늘로 계산한 안전 경로 3안(그늘/균형/최단).</div>
+      <span class="go">열어보기 →</span>
+    </a>
+  </div>
+  <div class="foot">
+    실 데이터: OSM 보행망 · V-World 건물높이 · 기상청 · 에어코리아 · 결정론 연산 엔진<br>
+    소스: <a href="https://github.com/heonjaeh-lab/project-uos">github.com/heonjaeh-lab/project-uos</a>
+  </div>
+</body></html>
