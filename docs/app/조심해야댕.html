@@ -296,24 +296,37 @@ function go(s){for(const el of document.querySelectorAll('.scr'))el.classList.re
 
 // ---- 지도 렌더 (실제 경로 지오메트리, 파스텔 스타일) ----
 function shadeColor(s){const a=[239,158,34],b=[38,169,155];return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*s)).join(',')})`;}
-function renderMap(elId,routeIdx,showPos){
-  const el=$(elId);const [mnx,mny,mxx,mxy]=DATA.bbox;const cf=Math.cos((mny+mxy)/2*Math.PI/180);
-  const W=320,H=el.clientHeight||200;const vb=`0 0 ${W} ${H}`;
+function mkMarker(x,y,color,txt){
+  return `<g transform="translate(${x},${y})"><circle r="10" fill="${color}" stroke="#fff" stroke-width="3"/>`+
+    `<text y="3.4" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" font-family="Gothic A1,sans-serif">${txt}</text></g>`;}
+function renderMap(elId,routeIdx,opts){
+  opts=opts||{};const detail=opts.detail!==false;
+  const el=$(elId);const [mnx,mny,mxx,mxy]=DATA.bbox;
+  const W=320,H=el.clientHeight||200;
   const px=lo=>(lo-mnx)/(mxx-mnx)*W, py=la=>H-(la-mny)/(mxy-mny)*H;
-  let svg=`<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;display:block"><rect width="${W}" height="${H}" fill="#F3EEE3"/>`;
-  svg+=`<ellipse cx="${W*.2}" cy="${H*.3}" rx="70" ry="48" fill="#E4EFD3"/><ellipse cx="${W*.8}" cy="${H*.8}" rx="76" ry="52" fill="#E4EFD3"/>`;
-  for(const e of DATA.context.slice(0,240)){svg+=`<polyline points="${e.map(c=>px(c[0])+','+py(c[1])).join(' ')}" fill="none" stroke="#EAE2D2" stroke-width="3" stroke-linecap="round"/>`;}
+  let s=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;display:block"><rect width="${W}" height="${H}" fill="#EFEADD"/>`;
+  // 공원(연한 초록) — 은은하게
+  s+=`<ellipse cx="${W*.22}" cy="${H*.26}" rx="72" ry="46" fill="#DCEBC8" opacity=".6"/><ellipse cx="${W*.83}" cy="${H*.84}" rx="80" ry="52" fill="#DCEBC8" opacity=".6"/>`;
+  // 배경 도로망 — detail에서만, 아주 옅고 얇게(경로가 돋보이도록)
+  if(detail){for(const e of DATA.context.slice(0,150)){s+=`<polyline points="${e.map(c=>px(c[0])+','+py(c[1])).join(' ')}" fill="none" stroke="#E5DDCD" stroke-width="1.6" stroke-linecap="round"/>`;}}
   const rt=DATA.routes[routeIdx];
-  for(const sg of rt.segs){const pts=sg.line.map(c=>px(c[0])+','+py(c[1])).join(' ');
-    svg+=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;}
-  for(const sg of rt.segs){const pts=sg.line.map(c=>px(c[0])+','+py(c[1])).join(' ');
-    svg+=`<polyline points="${pts}" fill="none" stroke="${shadeColor(sg.shade)}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;}
-  for(const p of rt.pois){svg+=`<g transform="translate(${px(p.lon)},${py(p.lat)})"><circle r="6.5" fill="#fff" stroke="${poiColor(p.type)}" stroke-width="2.5"/><circle r="2.6" fill="${poiColor(p.type)}"/></g>`;}
-  const g=DATA.gps;svg+=`<g transform="translate(${px(g.lon)},${py(g.lat)})"><circle r="9" fill="#F1592A" opacity=".28" style="transform-origin:center;animation:pulse 2s ease-out infinite"/><circle r="6" fill="#F1592A" stroke="#fff" stroke-width="2.5"/></g>`;
-  const d=DATA.dest;svg+=`<g transform="translate(${px(d[0])},${py(d[1])})"><circle r="7" fill="#2E2A27" stroke="#fff" stroke-width="2.5"/></g>`;
-  svg+=`</svg>`;
+  const path=sg=>sg.line.map(c=>px(c[0])+','+py(c[1])).join(' ');
+  // 경로: 굵은 흰 테두리 + 그늘색(햇볕→그늘). 얇은 도로 위에서 확실히 돋보이게.
+  for(const sg of rt.segs)s+=`<polyline points="${path(sg)}" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for(const sg of rt.segs)s+=`<polyline points="${path(sg)}" fill="none" stroke="${shadeColor(sg.shade)}" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  // POI: 흰 바탕 + 컬러 링(또렷하게). detail에서만.
+  if(detail){for(const p of rt.pois){s+=`<g transform="translate(${px(p.lon)},${py(p.lat)})"><circle r="7" fill="#fff"/><circle r="7" fill="none" stroke="${poiColor(p.type)}" stroke-width="3"/><circle r="2.8" fill="${poiColor(p.type)}"/></g>`;}}
+  // 출발·도착 (펄스 제거 → 깔끔한 정적 마커)
+  const first=rt.segs[0]?rt.segs[0].line[0]:DATA.origin;
+  const last=rt.segs.length?rt.segs[rt.segs.length-1].line.slice(-1)[0]:DATA.dest;
+  s+=mkMarker(px(first[0]),py(first[1]),'#35B36B','출');
+  s+=mkMarker(px(last[0]),py(last[1]),'#F1592A','착');
+  // 산책중: 현위치(정적, 애니메이션 없음)
+  if(opts.pos&&rt.segs.length){const mid=rt.segs[Math.floor(rt.segs.length*0.42)].line[0];
+    s+=`<g transform="translate(${px(mid[0])},${py(mid[1])})"><circle r="7.5" fill="#F1592A" stroke="#fff" stroke-width="3"/></g>`;}
+  s+=`</svg>`;
   const avg=Math.round(rt.shade*100);
-  el.innerHTML=svg+`<div class="legend"><span style="width:9px;height:9px;border-radius:3px;background:#26A99B"></span>그늘 ${avg}% · ${rt.label}</div>`;
+  el.innerHTML=s+`<div class="legend"><span style="width:9px;height:9px;border-radius:3px;background:#26A99B"></span>그늘 ${avg}%</div>`;
 }
 function poiColor(t){return {animal_hospital:'#EF5350',toilet:'#2F9BD6',park:'#7BAE3C',water_fountain:'#2F9BD6',pet_shop:'#EF9E22'}[t]||'#F1592A';}
 const POI_KO={animal_hospital:'동물병원',toilet:'공중화장실',park:'공원',water_fountain:'급수대',pet_shop:'펫샵'};
@@ -356,7 +369,7 @@ function renderHome(){
   const top=DATA.routes[0];
   $('homeRouteName').textContent=top.label+' 코스';
   $('homeRouteMeta').textContent=`${(top.distance_m/1000).toFixed(1)}km · ${Math.round(top.est_time_min)}분 · 그늘 ${Math.round(top.shade*100)}%`;
-  renderMap('homeMap',0,false);
+  renderMap('homeMap',0,{detail:false});
   // 비 오면 CTA 막기
   const cta=$('homeCta');
   if(adv.status==='stop'){cta.classList.add('disabled');cta.textContent='오늘은 산책을 쉬어요';cta.onclick=null;}
@@ -378,7 +391,7 @@ function renderRoute(){
   const g=DATA.gps;
   $('poiList').innerHTML=r.pois.length?r.pois.map(p=>{const d=Math.round(haversine(g.lat,g.lon,p.lat,p.lon)/10)*10;
     return `<div class="poi"><span class="pic" style="background:${poiIconBg(p.type)}"><span style="width:15px;height:15px;border-radius:50%;background:${poiColor(p.type)}"></span></span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">${POI_KO[p.type]||p.type}</div><div style="font-weight:600;font-size:12px;color:#9A928B">${d}m · ${POI_SUB[p.type]||''}</div></div></div>`;}).join(''):'<div style="color:#9A928B;font-size:12.5px;padding:4px 2px">이 경로 주변 등록된 안전지점이 없어요.</div>';
-  renderMap('routeMap',sel,false);
+  renderMap('routeMap',sel,{detail:true});
 }
 function selectRoute(i){sel=i;renderRoute();}
 
@@ -386,7 +399,7 @@ function selectRoute(i){sel=i;renderRoute();}
 const TIPS=['지금은 그늘 구간이야. 천천히 걷자 🌳','앞쪽 급수대에서 물 한 모금 어때?','만두 발바닥 뜨겁지 않은지 확인해줘'];
 let tipI=0;
 function renderWalk(){
-  renderMap('walkMap',sel,true);
+  renderMap('walkMap',sel,{detail:true,pos:true});
   $('tipText').textContent=TIPS[0];tipI=0;
   $('tipBtn').onclick=()=>{tipI=(tipI+1)%TIPS.length;$('tipText').textContent=TIPS[tipI];};
   $('walkDist').textContent=(DATA.routes[sel].distance_m/1000*0.42).toFixed(1)+'km';
