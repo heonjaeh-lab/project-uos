@@ -66,12 +66,37 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
 @keyframes pulse{0%{transform:scale(1);opacity:.5}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
 @keyframes toastin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popin{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+/* 하단 탭바 */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:62px;display:none;background:rgba(255,253,250,.96);
+  border-top:1px solid #F0E4D2;backdrop-filter:blur(8px);z-index:8}
+.tabbar.on{display:flex}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:#B9AE9F}
+.tab.act{color:#F1592A}
+.tab .tlbl{font-weight:800;font-size:10.5px}
+.hb-tab{padding-bottom:70px}
+/* 폼 컨트롤 */
+.sec{font-weight:800;font-size:12.5px;color:#9A928B;margin:18px 0 8px 2px}
+.field{background:#FFF7EE;border:1.5px solid #F4E7D5;border-radius:14px;padding:12px 14px;width:100%;
+  font-family:'Gothic A1';font-weight:700;font-size:15px;color:#2E2A27;outline:none}
+.pchips{display:flex;flex-wrap:wrap;gap:8px}
+.pchip{border:1.5px solid #E9DCC9;background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;
+  color:#6b5d4f;cursor:pointer}
+.pchip.on{border-color:#F1592A;background:#FDEDE4;color:#C24E24}
+.toggle{width:46px;height:27px;border-radius:999px;background:#E3D7C6;position:relative;cursor:pointer;flex:none;transition:.15s}
+.toggle.on{background:#F1592A}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.15s}
+.toggle.on::after{left:22px}
+.rowline{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #F1E6D7;border-radius:16px;padding:14px 15px}
+.wkbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.wkbar .b{width:60%;border-radius:6px 6px 3px 3px;background:linear-gradient(#F5A623,#F1592A)}
+.wkbar .d{font-size:10.5px;color:#9A928B;font-weight:700}
+.tagp{display:inline-flex;align-items:center;font-weight:700;font-size:11.5px;color:#C24E24;background:#FBE7DB;padding:4px 10px;border-radius:999px;margin:3px 4px 0 0}
 </style></head><body>
 <div class="phone">
   <!-- ===== HOME ===== -->
   <div class="scr on" id="s-home">
     <div class="stbar"><span>9:41</span><span class="notch"></span></div>
-    <div class="body" style="padding:4px 22px 18px">
+    <div class="body hb-tab" style="padding:4px 22px 18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <span class="brand">조심해야댕</span>
         <div class="avatar"><img src="assets/mandu.png" alt="만두"></div>
@@ -107,8 +132,8 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
           <span style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;color:#1c8a7e;background:#E4F4F1;padding:6px 11px;border-radius:999px"><span style="width:10px;height:10px;border-radius:50%;background:#35B36B"></span>안전</span>
         </div>
       </div>
+      <button class="btn" id="homeCta" style="margin-top:16px" onclick="go('route')">안전한 길 찾기</button>
     </div>
-    <div class="cta"><button class="btn" id="homeCta" onclick="go('route')">안전한 길 찾기</button></div>
   </div>
 
   <!-- ===== ROUTE ===== -->
@@ -180,6 +205,79 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
       <button class="btn" style="margin-top:20px" onclick="go('home')">홈으로</button>
     </div>
   </div>
+
+  <!-- ===== ONBOARD (프로필 등록) ===== -->
+  <div class="scr" id="s-onboard">
+    <div class="stbar"><span>9:41</span><span class="notch"></span></div>
+    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:2px 20px 6px">
+      <button class="icobtn" onclick="go('my')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2E2A27" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+      <span style="font-weight:900;font-size:19px;color:#2E2A27">반려견 프로필</span>
+    </div>
+    <div class="body" style="padding:6px 22px 20px">
+      <div style="font-weight:600;font-size:12.5px;color:#9A928B;line-height:1.5">입력하면 이 아이 기준으로 위험지수·경로가 개인화돼요. 단두종·소형견·지병에 맞춰 더 안전하게.</div>
+      <div class="sec">이름</div><input class="field" id="fName" value="만두">
+      <div class="sec">견종</div><input class="field" id="fBreed" value="말티즈">
+      <div style="display:flex;gap:10px"><div style="flex:1"><div class="sec">나이(살)</div><input class="field" id="fAge" type="number" value="4"></div><div style="flex:1"><div class="sec">체중(kg)</div><input class="field" id="fWeight" type="number" value="3.2"></div></div>
+      <div class="sec">털 길이</div><div class="pchips" id="fCoat" data-single="1"><span class="pchip" data-v="short">단모</span><span class="pchip on" data-v="medium">중간</span><span class="pchip" data-v="long">장모</span></div>
+      <div class="sec">체급</div><div class="pchips" id="fSize" data-single="1"><span class="pchip on" data-v="small">소형</span><span class="pchip" data-v="medium">중형</span><span class="pchip" data-v="large">대형</span></div>
+      <div class="rowline" style="margin-top:14px"><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">단두종</div><div style="font-weight:600;font-size:12px;color:#9A928B">코가 납작한 견종 (여름 열사병 주의)</div></div><div class="toggle" id="fBrachy" onclick="this.classList.toggle('on')"></div></div>
+      <div class="sec">지병 (여러 개 선택)</div><div class="pchips" id="fCond"><span class="pchip on" data-v="patella">슬개골</span><span class="pchip" data-v="joint">관절</span><span class="pchip" data-v="heart">심장</span><span class="pchip" data-v="obesity">비만</span><span class="pchip" data-v="none">없음</span></div>
+    </div>
+    <div class="cta"><button class="btn" onclick="saveProfile()">저장하고 개인화 켜기</button></div>
+  </div>
+
+  <!-- ===== RECORD (산책 기록) ===== -->
+  <div class="scr" id="s-record">
+    <div class="stbar"><span>9:41</span><span class="notch"></span></div>
+    <div style="flex:none;padding:2px 22px 6px"><span style="font-weight:900;font-size:22px;color:#2E2A27">산책 기록</span></div>
+    <div class="body hb-tab" style="padding:6px 22px 20px">
+      <div class="card" style="padding:16px 18px">
+        <div style="font-weight:800;font-size:13px;color:#9A928B">이번 주</div>
+        <div style="display:flex;margin-top:10px">
+          <div style="flex:1"><span class="num" style="font-size:24px;color:#2E2A27" id="wkWalks"></span><span style="font-weight:700;color:#9A928B;font-size:12px"> 회</span><div style="font-weight:700;font-size:11px;color:#9A928B">산책</div></div>
+          <div style="flex:1;border-left:1px solid #F0E6D6;padding-left:14px"><span class="num" style="font-size:24px;color:#F1592A" id="wkKm"></span><span style="font-weight:700;color:#9A928B;font-size:12px"> km</span><div style="font-weight:700;font-size:11px;color:#9A928B">총 거리</div></div>
+          <div style="flex:1;border-left:1px solid #F0E6D6;padding-left:14px"><span class="num" style="font-size:24px;color:#26A99B" id="wkShade"></span><span style="font-weight:700;color:#9A928B;font-size:12px"> %</span><div style="font-weight:700;font-size:11px;color:#9A928B">평균 그늘</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:5px;height:70px;margin-top:16px" id="wkChart"></div>
+      </div>
+      <div class="rowline" style="margin-top:12px"><span style="font-size:20px">💩</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">배변 로그</div><div style="font-weight:600;font-size:12px;color:#9A928B">이번 주 대변 6 · 소변 14</div></div></div>
+      <div class="sec" style="margin-top:18px">최근 산책</div>
+      <div style="display:flex;flex-direction:column;gap:9px" id="histList"></div>
+    </div>
+  </div>
+
+  <!-- ===== MY (마이) ===== -->
+  <div class="scr" id="s-my">
+    <div class="stbar"><span>9:41</span><span class="notch"></span></div>
+    <div style="flex:none;padding:2px 22px 6px"><span style="font-weight:900;font-size:22px;color:#2E2A27">마이</span></div>
+    <div class="body hb-tab" style="padding:6px 22px 20px">
+      <div class="card" style="padding:18px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:62px;height:62px;border-radius:50%;overflow:hidden;background:#F6EEE2;flex:none"><img src="assets/mandu.png" style="width:100%;height:100%;object-fit:cover;transform:scale(2.1);transform-origin:40% 34%"></div>
+          <div style="flex:1"><div class="num" style="font-size:22px;color:#2E2A27" id="myName"></div><div style="font-weight:700;font-size:13px;color:#9A928B" id="myMeta"></div></div>
+          <button class="icobtn" onclick="go('onboard')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E2A27" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
+        </div>
+        <div style="margin-top:12px" id="myTags"></div>
+      </div>
+      <div class="sec">설정</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div class="rowline"><span style="font-size:18px">📍</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">실시간 위치 공유</div><div style="font-weight:600;font-size:12px;color:#9A928B">가족·친구에게 산책 위치 공유</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="rowline"><span style="font-size:18px">🔔</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">산책 알림</div><div style="font-weight:600;font-size:12px;color:#9A928B">위험한 날·좋은 시간대 알려주기</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="rowline" onclick="go('onboard')" style="cursor:pointer"><span style="font-size:18px">🐶</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">반려견 추가</div><div style="font-weight:600;font-size:12px;color:#9A928B">여러 마리 등록하기</div></div><span style="color:#C9BBA8">›</span></div>
+      </div>
+      <div class="card" style="margin-top:16px;padding:14px 16px;background:#FBF4E9;border-color:#F1E6D7">
+        <div style="font-weight:800;font-size:12.5px;color:#7d6a56">안내</div>
+        <div style="font-weight:600;font-size:12px;color:#9A928B;margin-top:4px;line-height:1.55">경로는 참고용이며 최종 안전 판단은 보호자 책임입니다. 건강 알림은 참고 신호이며 수의학적 진단·처방이 아닙니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 탭바 -->
+  <div class="tabbar" id="tabbar">
+    <div class="tab" data-t="home" onclick="go('home')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg><span class="tlbl">홈</span></div>
+    <div class="tab" data-t="record" onclick="go('record')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg><span class="tlbl">기록</span></div>
+    <div class="tab" data-t="my" onclick="go('my')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg><span class="tlbl">마이</span></div>
+  </div>
 </div>
 
 <script>
@@ -190,7 +288,11 @@ const LVLABEL={green:'좋음',yellow:'주의',red:'위험'};
 const $=id=>document.getElementById(id);
 function go(s){for(const el of document.querySelectorAll('.scr'))el.classList.remove('on');
   $('s-'+s).classList.add('on');$('s-'+s).querySelector('.body')?.scrollTo(0,0);
-  if(s==='route')renderRoute();if(s==='walk')renderWalk();if(s==='done')renderDone();}
+  const tabs=['home','record','my'];const tb=$('tabbar');
+  tb.classList.toggle('on',tabs.includes(s));
+  for(const t of tb.children)t.classList.toggle('act',t.dataset.t===s);
+  if(s==='home')renderHome();if(s==='route')renderRoute();if(s==='walk')renderWalk();
+  if(s==='done')renderDone();if(s==='record')renderRecord();if(s==='my')renderMy();}
 
 // ---- 지도 렌더 (실제 경로 지오메트리, 파스텔 스타일) ----
 function shadeColor(s){const a=[239,158,34],b=[38,169,155];return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*s)).join(',')})`;}
@@ -300,6 +402,40 @@ function renderDone(){const r=DATA.routes[sel];
 function toggleRain(){rainDemo=!rainDemo;
   $('rainToggle').textContent=rainDemo?'☀️ 맑은 날로 되돌리기':'🌧️ 비 오는 날이면? (미리보기)';
   renderHome();}
-renderHome();
+
+// ---- 프로필(사용자 입력) / 기록(로그) — 엔진 산출이 아니라 UI 데이터 ----
+let PROFILE={name:'만두',breed:'말티즈',age:4,weight:3.2,coat:'medium',size:'small',brachy:false,conditions:['patella']};
+const COND_KO={patella:'슬개골 탈구',joint:'관절',heart:'심장',obesity:'비만',none:'없음'};
+const HISTORY=[{d:'오늘',n:'그늘 최대 코스',km:1.8,t:24,sh:78},{d:'어제',n:'균형 코스',km:1.5,t:21,sh:69},
+  {d:'2일 전',n:'동네 순환',km:2.1,t:28,sh:64},{d:'3일 전',n:'최단 코스',km:1.4,t:18,sh:55}];
+const WEEKLY={walks:6,km:10.3,shade:71,days:[['월',.5],['화',.8],['수',.3],['목',.9],['금',.6],['토',1.0],['일',.7]]};
+
+function renderMy(){$('myName').textContent=PROFILE.name;
+  const sz={small:'소형',medium:'중형',large:'대형'}[PROFILE.size]||'';
+  $('myMeta').textContent=`${PROFILE.breed} · ${sz} · ${PROFILE.age}살 · ${PROFILE.weight}kg`;
+  const tags=[];if(PROFILE.brachy)tags.push('단두종');
+  for(const c of PROFILE.conditions)if(c!=='none')tags.push(COND_KO[c]||c);
+  $('myTags').innerHTML=tags.length?tags.map(t=>`<span class="tagp">${t}</span>`).join(''):'<span style="font-size:12px;color:#9A928B">특이사항 없음</span>';}
+
+function renderRecord(){$('wkWalks').textContent=WEEKLY.walks;$('wkKm').textContent=WEEKLY.km;$('wkShade').textContent=WEEKLY.shade;
+  const mx=Math.max(...WEEKLY.days.map(d=>d[1]));
+  $('wkChart').innerHTML=WEEKLY.days.map(([d,v])=>`<div class="wkbar"><div class="b" style="height:${8+v/mx*46}px"></div><div class="d">${d}</div></div>`).join('');
+  $('histList').innerHTML=HISTORY.map(h=>`<div class="rowline"><span style="width:36px;height:36px;border-radius:11px;background:#E4F4F1;display:flex;align-items:center;justify-content:center;font-size:16px">🐾</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:#2E2A27">${h.n}</div><div style="font-weight:600;font-size:12px;color:#9A928B">${h.d} · ${h.km}km · ${h.t}분 · 그늘 ${h.sh}%</div></div></div>`).join('');}
+
+// 온보딩 칩 선택(단일/다중, '없음' 배타)
+document.addEventListener('click',e=>{const c=e.target.closest('.pchip');if(!c)return;
+  const box=c.parentElement;
+  if(box.dataset.single){for(const x of box.children)x.classList.remove('on');c.classList.add('on');}
+  else if(c.dataset.v==='none'){for(const x of box.children)x.classList.remove('on');c.classList.add('on');}
+  else{c.classList.toggle('on');box.querySelector('[data-v="none"]')?.classList.remove('on');}});
+
+function saveProfile(){const one=box=>box.querySelector('.pchip.on')?.dataset.v;
+  PROFILE={name:$('fName').value||'만두',breed:$('fBreed').value||'말티즈',
+    age:parseFloat($('fAge').value)||0,weight:parseFloat($('fWeight').value)||0,
+    coat:one($('fCoat')),size:one($('fSize')),brachy:$('fBrachy').classList.contains('on'),
+    conditions:[...$('fCond').querySelectorAll('.pchip.on')].map(x=>x.dataset.v)};
+  go('my');}
+
+go('home');
 </script>
 </body></html>
