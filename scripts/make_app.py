@@ -330,7 +330,7 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
 
 <script>
 const DATA=__DATA__;
-const API_BASE="__API_BASE__";   // "" → 데모만. 값 있으면 GPS→서버 호출.
+const API_BASE=__API_BASE__;   // "" → 데모만. 값 있으면 GPS→서버 호출. (json.dumps로 안전 주입)
 let sel=0, rainDemo=false;
 const SIG={green:'#35B36B',yellow:'#F3B23A',red:'#EE5140'};
 const LVLABEL={green:'좋음',yellow:'주의',red:'위험'};
@@ -546,7 +546,7 @@ go('home');
 </body></html>
 """
 
-out = HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)).replace("__API_BASE__", API_BASE)
+out = HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)).replace("__API_BASE__", json.dumps(API_BASE))
 for path in (OUT, "docs/app/index.html"):   # index.html = 서빙/Pages 진입점
     with open(path, "w", encoding="utf-8") as f:
         f.write(out)
