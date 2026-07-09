@@ -1,0 +1,14 @@
+# 조심해야댕 GPS 라우팅 서버 — 엔진 런타임 + FastAPI. pytest 등 개발도구 제외.
+osmnx==2.1.0
+shapely==2.1.2
+pyproj==3.7.2
+astral==3.2
+networkx==3.6.1
+numpy==2.5.1
+pandas==3.0.3
+pydantic==2.13.4
+geojson==3.3.0
+requests==2.32.3
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
