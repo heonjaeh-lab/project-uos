@@ -46,6 +46,7 @@
 from __future__ import annotations
 
 import networkx as nx
+import pytest
 
 from engine.routing.payload import edge_polyline, route_payload, routes_bbox
 from engine.schemas import RiskLevel
@@ -94,12 +95,12 @@ def test_routes_bbox_covers_all_points_with_pad():
     r = RouteResult(node_path=[1, 3, 2], max_risk_level=RiskLevel.green)
     routes = [route_payload(G, r, "x")]
     bb = routes_bbox(routes, pad=0.001)
-    assert bb == [127.099, 37.499, 127.103, 37.502]   # min-pad .. max+pad
+    assert bb == pytest.approx([127.099, 37.499, 127.103, 37.502])   # min-pad .. max+pad (float)
 
 
 def test_routes_bbox_empty_uses_center():
     bb = routes_bbox([], center=(37.5, 127.0))
-    assert bb == [126.99, 37.49, 127.01, 37.51]
+    assert bb == pytest.approx([126.99, 37.49, 127.01, 37.51])
 ```
 
 - [ ] **Step 2: 실패 확인**
