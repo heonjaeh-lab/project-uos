@@ -12,7 +12,8 @@
         # 비용함수
         edge_cost, compute_edge_costs, DEFAULT_WALK_SPEED_M_PER_MIN,
         # 탐색
-        nearest_node, find_route, assemble_route, neighborhood_loop, safe_view,
+        nearest_node, find_route, assemble_route, neighborhood_loop, recommend_loops,
+        safe_view,
     )
 
 M5(개인화)/M6(게임화) 로직은 이번 범위에서 만들지 않는다. `CostParams`/`RiskParams`/
@@ -44,6 +45,7 @@ from engine.routing.router import (
     find_route,
     nearest_node,
     neighborhood_loop,
+    recommend_loops,
     recommend_routes,
     safe_view,
 )
@@ -70,6 +72,7 @@ __all__ = [
     "recommend_routes",
     "assemble_route",
     "neighborhood_loop",
+    "recommend_loops",
     "safe_view",
     # payload
     "edge_polyline",

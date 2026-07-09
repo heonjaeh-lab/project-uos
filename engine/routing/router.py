@@ -521,10 +521,126 @@ def neighborhood_loop(
     )
 
 
+# ---------------------------------------------------------------------------
+# 다중 순환 루프 추천 (GPS 무목적지 모드 — recommend_routes의 순환판)
+# ---------------------------------------------------------------------------
+
+
+def _label_loops(loops: list[RouteResult]) -> list[dict]:
+    """서로 다른 순환 루프들에 실제 특성 기준 라벨을 붙이고 그늘 많은 순 정렬.
+
+    `_label_routes`와 같은 방식(결과 특성 기준, 변형 소스 기준이 아님). 단일
+    후보로 collapse된 경우 목적지 왕복이 아니라 순환이므로 '추천' 대신 '동네
+    순환'을 쓴다.
+    """
+    if len(loops) == 1:
+        return [{"label": "동네 순환", "route": loops[0]}]
+    shadiest = max(loops, key=lambda r: r.avg_shade_ratio)
+    shortest = min(loops, key=lambda r: r.distance_m)
+    out = []
+    for r in loops:
+        if r is shadiest:
+            lab = "그늘 최대"
+        elif r is shortest:
+            lab = "짧은 순환"
+        else:
+            lab = "균형"
+        out.append({"label": lab, "route": r})
+    out.sort(key=lambda x: -x["route"].avg_shade_ratio)
+    return out
+
+
+def _try_loop(
+    G,
+    start_node: int,
+    target_m: float,
+    params: CostParams,
+    *,
+    walk_speed_m_per_min: float,
+    pois: Iterable[POI] | None,
+) -> RouteResult | None:
+    """`neighborhood_loop` 1회 시도. 실패(빈 경로/예외)는 조용히 None."""
+    try:
+        loop = neighborhood_loop(
+            G, start_node, target_m, params,
+            walk_speed_m_per_min=walk_speed_m_per_min, pois=pois,
+        )
+    except Exception:
+        return None
+    if loop is None or loop.reason is not None or not loop.node_path:
+        return None
+    return loop
+
+
+def recommend_loops(
+    G,
+    orig_node: int,
+    target_m: float,
+    pois: Iterable[POI] | None = None,
+    *,
+    cost_params: CostParams | None = None,
+    walk_speed_m_per_min: float = DEFAULT_WALK_SPEED_M_PER_MIN,
+    max_routes: int = 3,
+) -> list[dict]:
+    """GPS 무목적지(동네 순환) 모드용 — 순환 루프 **여러 변형**을 반환(중복 제거).
+
+    `recommend_routes`(목적지 있는 경우)의 순환판. `neighborhood_loop`을 서로
+    다른 `CostParams.shade_bonus`·목표 거리로 여러 번 호출해 그늘 많은 순환/
+    균형 순환/짧은 순환처럼 서로 다른 루프만 모은다. 완전 최적화는 하지 않는다
+    (target±20%면 충분 — neighborhood_loop과 동일 철학).
+
+    변형이 특정 파라미터에서 실패(빈 경로/예외)하면 그 변형만 조용히 건너뛴다.
+    모든 변형이 실패해도 기본 파라미터로 한 번 더 시도해 최소 1개는 반환한다
+    (기존 단일 루프 폴백과 동등한 보장 — 무목적지 모드가 완전히 비는 일은 없다).
+
+    Returns:
+        list[{label, route}] — `recommend_routes`와 완전히 동일한 형식(route는
+        `RouteResult`라 `route_payload`가 그대로 소비). 그늘 많은 순, `max_routes`
+        (기본 3) 상한. 후보가 전혀 없으면 빈 리스트.
+    """
+    base = cost_params or CostParams()
+    # (CostParams, 목표거리 배수) 변형 — 그늘 많은 순환 / 균형 순환(기본과 유사) /
+    # 짧은 순환(그늘 유인 없음 + 목표거리도 줄임).
+    variants: list[tuple[CostParams, float]] = [
+        (base.model_copy(update={"shade_bonus": 0.9}), 1.0),
+        (base.model_copy(update={"shade_bonus": 0.4}), 1.0),
+        (base.model_copy(update={"shade_bonus": 0.0}), 0.75),
+    ]
+
+    seen: set[tuple] = set()
+    found: list[RouteResult] = []
+    for params, target_mult in variants:
+        loop = _try_loop(
+            G, orig_node, target_m * target_mult, params,
+            walk_speed_m_per_min=walk_speed_m_per_min, pois=pois,
+        )
+        if loop is None:
+            continue
+        key = tuple(loop.node_path)
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(loop)
+
+    if not found:
+        # 모든 변형이 실패 — 기존 단일 루프 폴백과 동등하게 기본 파라미터로 한 번 더.
+        loop = _try_loop(
+            G, orig_node, target_m, base,
+            walk_speed_m_per_min=walk_speed_m_per_min, pois=pois,
+        )
+        if loop is not None:
+            found.append(loop)
+
+    if not found:
+        return []
+    return _label_loops(found)[:max_routes]
+
+
 __all__ = [
     "nearest_node",
     "safe_view",
     "assemble_route",
     "find_route",
     "neighborhood_loop",
+    "recommend_loops",
 ]

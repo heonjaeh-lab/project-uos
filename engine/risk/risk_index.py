@@ -130,15 +130,25 @@ def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
 
-def _heat_norm(air_temp_c: float, humidity_pct: float) -> float:
-    """열 스트레스 정규화(기온+습도 체감 근사)."""
-    apparent = air_temp_c + HEAT_APPARENT_HUMIDITY_COEF * humidity_pct
+def _heat_norm(air_temp_c: float, humidity_pct: float, heat_offset_c: float = 0.0) -> float:
+    """열 스트레스 정규화(기온+습도 체감 근사).
+
+    heat_offset_c(개인화, `RiskParams.heat_offset_c`)를 체감온도에 더해 유효 임계를
+    `HEAT_LOW_C - heat_offset_c`~`HEAT_HIGH_C - heat_offset_c`로 낮춘 것과 동치로
+    만든다(양수=민감견 → 더 낮은 기온에서도 heat 기여↑). offset=0이면 기존과 동일.
+    """
+    apparent = air_temp_c + HEAT_APPARENT_HUMIDITY_COEF * humidity_pct + heat_offset_c
     return _clamp((apparent - HEAT_LOW_C) / (HEAT_HIGH_C - HEAT_LOW_C))
 
 
-def _cold_norm(air_temp_c: float) -> float:
-    """저체온 정규화(겨울 모드, heat 대체)."""
-    return _clamp((COLD_HIGH_C - air_temp_c) / (COLD_HIGH_C - COLD_LOW_C))
+def _cold_norm(air_temp_c: float, cold_offset_c: float = 0.0) -> float:
+    """저체온 정규화(겨울 모드, heat 대체).
+
+    cold_offset_c(개인화, `RiskParams.cold_offset_c`)를 대칭 적용해 유효 임계를
+    `COLD_HIGH_C + cold_offset_c`~`COLD_LOW_C + cold_offset_c`로 올린 것과 동치로
+    만든다(양수=민감견 → 더 높은(덜 추운) 기온에서도 cold 기여↑). offset=0이면 기존과 동일.
+    """
+    return _clamp((COLD_HIGH_C - air_temp_c + cold_offset_c) / (COLD_HIGH_C - COLD_LOW_C))
 
 
 def _surface_norm(road_surface_temp_c: float) -> float:
@@ -222,10 +232,12 @@ def compute_risk(
     partial_data = pm_missing or surface_missing
 
     # 1) 4대 요소 정규화(0~1). heat 슬롯은 계절에 따라 열 스트레스/저체온.
+    #    개인화 온도 오프셋(params.heat_offset_c/cold_offset_c)은 여기서만 반영되며
+    #    둘 다 0.0(기본값)이면 기존 공식과 완전히 동일하다(회귀 보존).
     if env.season == Season.winter:
-        heat_component = _cold_norm(env.air_temp_c)
+        heat_component = _cold_norm(env.air_temp_c, params.cold_offset_c)
     else:
-        heat_component = _heat_norm(env.air_temp_c, env.humidity_pct)
+        heat_component = _heat_norm(env.air_temp_c, env.humidity_pct, params.heat_offset_c)
 
     surface_component = 0.0 if surface_missing else _surface_norm(env.road_surface_temp_c)
     uv_component = _uv_norm(env.uv_index)

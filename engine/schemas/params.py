@@ -22,6 +22,14 @@ class RiskParams(BaseModel):
     pm_weight: float = Field(0.20, description="미세먼지 기여 가중")
     yellow_threshold: float = Field(40.0, description="노랑 경계 점수(0~100)")
     red_threshold: float = Field(70.0, description="빨강 경계 점수(0~100)")
+    heat_offset_c: float = Field(
+        0.0,
+        description="개인화 온도 민감도 오프셋(℃). 양수면 더 낮은 기온에서 위험 상승(민감견).",
+    )
+    cold_offset_c: float = Field(
+        0.0,
+        description="개인화 온도 민감도 오프셋(℃). 양수면 더 높은(덜 추운) 기온에서 위험 상승(민감견).",
+    )
     # TODO: 실측/체감 피드백으로 보정
 
 

@@ -1,8 +1,14 @@
 """조심해야댕 GPS 라우팅 API — 정적 앱(GitHub Pages)이 HTTPS로 호출하는 얇은 FastAPI 래퍼.
 
 GET /api/health → {"status":"ok"}
-GET /api/route?lat&lon[&dest_lat&dest_lon]
+GET /api/route?lat&lon[&dest_lat&dest_lon][&breed&size&brachy]
     → engine.sources.local_routing.gps_map_payload(...) (map_data.json 동일 스키마).
+GET /api/weather?lat&lon[&breed&size&brachy]
+    → engine.sources.local_routing.weather_payload(...) ({"meta","hourly"}), 경량(그래프/
+      OSM/V-World 미호출) — 라우팅 세마포어 없이 바로 처리한다.
+
+breed/size/brachy가 주어지면 engine.personalization.profile_to_risk_params로
+RiskParams를 만들어 위험지수·산책 권고를 개인화한다(라우팅 비용/그래프는 불변).
 
 엔진 계산은 블로킹(OSM 다운로드·shapely·외부 API)이라 sync 핸들러로 두면 FastAPI가
 스레드풀에서 실행한다. 런타임 LLM 없음 · 결정론 유지.
@@ -19,7 +25,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from engine.sources.local_routing import gps_map_payload, _haversine_m
+from engine.personalization import profile_to_risk_params
+from engine.sources.local_routing import gps_map_payload, weather_payload, _haversine_m
 
 app = FastAPI(title="조심해야댕 GPS 라우팅 API", version="1.0")
 
@@ -49,6 +56,17 @@ app.add_middleware(
 )
 
 
+def _risk_params_from_query(breed: str | None, size: str | None, brachy: bool | None):
+    """breed/size/brachy 쿼리 → RiskParams(개인화) 또는 None(미지정 시 기존과 동일).
+
+    /api/route·/api/weather가 공유(중복 제거). 잘못된 breed/size 문자열은 조용히
+    무시(폴백 0)되며 예외를 던지지 않는다(엔진 fail-soft 원칙).
+    """
+    if breed is None and size is None and brachy is None:
+        return None
+    return profile_to_risk_params(breed=breed, size=size, brachy=brachy)
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -60,6 +78,9 @@ def route(
     lon: float = Query(..., ge=-180, le=180),
     dest_lat: float | None = Query(None, ge=-90, le=90),
     dest_lon: float | None = Query(None, ge=-180, le=180),
+    breed: str | None = Query(None, description="견종명(개인화, 선택)"),
+    size: str | None = Query(None, description="체급 toy|small|medium|large(개인화, 선택)"),
+    brachy: bool | None = Query(None, description="단두종 여부(개인화, 선택)"),
 ) -> JSONResponse:
     # 지오펜스: 서비스 지역(한국) 밖이면 엔진에 넘기지 않고 즉시 거절.
     if not _in_korea(lat, lon):
@@ -72,12 +93,17 @@ def route(
             raise HTTPException(status_code=422,
                                 detail=f"destination too far (walking route ≤ {int(_MAX_DEST_M)}m)")
 
+    risk_params = _risk_params_from_query(breed, size, brachy)
+
     # 동시 실행 상한 초과 → 즉시 503(스레드/메모리 점유 폭주 방지). 검증 실패는 세마포어 전에 처리.
     if not _route_sem.acquire(blocking=False):
         raise HTTPException(status_code=503, detail="server busy, please retry shortly")
     try:
         # GPS 앱 프로파일: ~1.5km 루프(그래프 반경↓ → 콜드 응답 빠르게). 근거: 계획 T6 성능 측정.
-        payload = gps_map_payload(lat, lon, dest=dest, dist_m=1000, target_m=1500)
+        # risk_params는 hourly/meta(위험지수·산책 권고)만 개인화한다 — 라우팅 비용(그늘/위험
+        # 가중 그래프)은 이번 범위에서 손대지 않는다(recommend_routes와 충돌 회피, 별도 과제).
+        payload = gps_map_payload(lat, lon, dest=dest, dist_m=1000, target_m=1500,
+                                  risk_params=risk_params)
     except Exception:  # 엔진/외부 API 실패 → 502(프론트가 데모 폴백)
         logger.exception("route build failed (lat=%s lon=%s)", lat, lon)  # 실오류는 서버 로그로만
         raise HTTPException(status_code=502, detail="route build failed")  # 키 유출 방지: 예외 문자열 미노출
@@ -85,4 +111,30 @@ def route(
         _route_sem.release()
     if not payload.get("routes"):
         raise HTTPException(status_code=404, detail="no route found near location")
+    return JSONResponse(payload)
+
+
+@app.get("/api/weather")
+def weather(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    breed: str | None = Query(None, description="견종명(개인화, 선택)"),
+    size: str | None = Query(None, description="체급 toy|small|medium|large(개인화, 선택)"),
+    brachy: bool | None = Query(None, description="단두종 여부(개인화, 선택)"),
+) -> JSONResponse:
+    """경량 날씨/위험지수 조회 — OSM·V-World·라우팅을 쓰지 않아 가볍다.
+
+    `/api/route`와 달리 세마포어를 걸지 않는다(그래프를 만들지 않아 메모리/시간
+    부담이 크지 않음).
+    """
+    if not _in_korea(lat, lon):
+        raise HTTPException(status_code=422, detail="location outside service area (Korea only)")
+
+    risk_params = _risk_params_from_query(breed, size, brachy)
+
+    try:
+        payload = weather_payload(lat, lon, params=risk_params)
+    except Exception:
+        logger.exception("weather build failed (lat=%s lon=%s)", lat, lon)
+        raise HTTPException(status_code=502, detail="weather build failed")
     return JSONResponse(payload)

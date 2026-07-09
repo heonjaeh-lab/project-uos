@@ -21,10 +21,10 @@ from engine.routing import (
     compute_edge_costs,
     inject_edge_attributes,
     nearest_node,
-    neighborhood_loop,
+    recommend_loops,
     recommend_routes,
 )
-from engine.schemas import CostParams
+from engine.schemas import CostParams, RiskParams
 from engine.sources import vworld
 
 SEOUL = ZoneInfo("Asia/Seoul")
@@ -85,8 +85,8 @@ def route_from_gps(lat: float, lon: float, dest: tuple[float, float] | None = No
     """사용자 GPS에서 경로 생성.
 
     - dest 지정: GPS→목적지 다중 경로(그늘/균형/최단). 그래프는 두 점을 덮도록 반경 자동 확장.
-    - dest 없음: GPS 기준 동네 순환(목표 거리 target_m).
-    반환: [{label, route}] (recommend_routes 형식).
+    - dest 없음: GPS 기준 동네 순환 다중 변형(목표 거리 target_m, 그늘/균형/짧은 순환).
+    반환: [{label, route}] (recommend_routes/recommend_loops 공용 형식).
     """
     if dest is not None:
         d = _haversine_m(lat, lon, dest[0], dest[1])
@@ -99,20 +99,40 @@ def route_from_gps(lat: float, lon: float, dest: tuple[float, float] | None = No
     G, _ = build_local_graph(lat, lon, dist_m=max(dist_m, target_m * 0.7),
                              when=when, cost_params=cost_params)
     orig = nearest_node(G, lat, lon)
-    loop = neighborhood_loop(G, orig, target_m, cost_params or CostParams(), pois=pois)
-    return [{"label": "동네 순환", "route": loop}] if loop and loop.reason is None else []
+    return recommend_loops(G, orig, target_m, pois, cost_params=cost_params or CostParams())
+
+
+def _weather_meta(env, hourly: list[dict], adv) -> dict:
+    """env·hourly·advisory → meta dict. `gps_map_payload`/`weather_payload` 공용
+    (중복 제거 — 스키마 표류 방지). now_* 필드는 항상 hourly[0] 기준."""
+    return {
+        "now_score": hourly[0]["score"] if hourly else None,
+        "now_level": hourly[0]["level"] if hourly else None,
+        "now_dominant": hourly[0]["dominant"] if hourly else None,
+        "advisory": adv.status,
+        "advisory_reason": adv.reason,
+        "rain": adv.rain,
+        "air_temp_c": env.air_temp_c,
+        "humidity_pct": env.humidity_pct,
+        "pm10": env.pm10,
+        "precip_prob_pct": env.precip_prob_pct,
+    }
 
 
 def gps_map_payload(lat: float, lon: float, dest: tuple[float, float] | None = None, *,
                     dist_m: float = 1800, target_m: float = 2000,
                     when: datetime | None = None, pois=None, cost_params=None,
-                    hours: int = 12) -> dict:
+                    hours: int = 12, risk_params: RiskParams | None = None) -> dict:
     """사용자 GPS(+선택 목적지)에서 프론트 map_data.json과 **동일 스키마** dict 생성.
 
     export_map_data(송파 데모)와 같은 필드를 서울 전역 임의 좌표로 낸다:
       routes(다중/순환) · bbox · gps · origin · dest · hourly · meta.
     프론트가 이 dict로 DATA를 교체하면 그대로 렌더된다. context(배경 도로망)는
     Leaflet 실 타일이 대체하므로 뺀다(payload·계산 절감).
+
+    risk_params(선택, M5 개인화 `profile_to_risk_params` 결과)를 주면 hourly/meta의
+    위험지수·산책 권고가 개인화된다. 라우팅 비용(그래프 비용함수)은 이번 범위에서
+    개인화하지 않는다(CostParams는 그대로) — 견종별 라우팅 반영은 별도 과제.
     """
     from engine.risk import walk_advisory
     from engine.routing import route_payload, routes_bbox
@@ -134,14 +154,15 @@ def gps_map_payload(lat: float, lon: float, dest: tuple[float, float] | None = N
         G, _ = build_local_graph(lat, lon, dist_m=max(dist_m, target_m * 0.7),
                                  when=when, env=env, cost_params=cost_params)
         orig = nearest_node(G, lat, lon)
-        loop = neighborhood_loop(G, orig, target_m, cost_params or CostParams(), pois=pois)
-        opts = [{"label": "동네 순환", "route": loop}] if loop and loop.reason is None else []
+        opts = recommend_loops(G, orig, target_m, pois, cost_params=cost_params or CostParams())
         dst = orig
 
     routes = [route_payload(G, o["route"], o["label"]) for o in opts]
+    for i, r in enumerate(routes):
+        r["id"] = f"r{i}"  # 프론트가 인덱스 대신 안정적 id로 경로를 선택할 수 있게.
     bbox = routes_bbox(routes, center=(lat, lon))
-    hourly = hourly_risk_series(when=when, hours=hours, lat=lat, lon=lon)
-    adv = walk_advisory(env, missing=missing)
+    hourly = hourly_risk_series(when=when, hours=hours, lat=lat, lon=lon, params=risk_params)
+    adv = walk_advisory(env, missing=missing, params=risk_params)
     return {
         "bbox": bbox,
         "gps": {"lon": lon, "lat": lat},
@@ -149,19 +170,27 @@ def gps_map_payload(lat: float, lon: float, dest: tuple[float, float] | None = N
         "dest": [round(float(G.nodes[dst]["x"]), 6), round(float(G.nodes[dst]["y"]), 6)],
         "routes": routes,
         "hourly": hourly,
-        "meta": {
-            "now_score": hourly[0]["score"] if hourly else None,
-            "now_level": hourly[0]["level"] if hourly else None,
-            "now_dominant": hourly[0]["dominant"] if hourly else None,
-            "advisory": adv.status,
-            "advisory_reason": adv.reason,
-            "rain": adv.rain,
-            "air_temp_c": env.air_temp_c,
-            "humidity_pct": env.humidity_pct,
-            "pm10": env.pm10,
-            "precip_prob_pct": env.precip_prob_pct,
-        },
+        "meta": _weather_meta(env, hourly, adv),
     }
 
 
-__all__ = ["load_local_walk_graph", "build_local_graph", "route_from_gps", "gps_map_payload"]
+def weather_payload(lat: float, lon: float, *, when: datetime | None = None,
+                    hours: int = 12, params: RiskParams | None = None) -> dict:
+    """경량 날씨/위험지수 payload — 그래프·OSM·V-World를 **호출하지 않는다**.
+
+    `build_env_at`+`hourly_risk_series`+`walk_advisory`만 호출해 `{"meta", "hourly"}`를
+    낸다(그늘/라우팅 없이 가벼움 — `/api/weather`용). `gps_map_payload`와 meta 조립
+    로직(`_weather_meta`)을 공유해 두 스키마가 표류하지 않도록 한다.
+    """
+    from engine.risk import walk_advisory
+    from engine.sources.weather import build_env_at, hourly_risk_series
+
+    when = when or datetime.now(SEOUL)
+    env, missing = build_env_at(lat, lon, when)
+    hourly = hourly_risk_series(when=when, hours=hours, lat=lat, lon=lon, params=params)
+    adv = walk_advisory(env, missing=missing, params=params)
+    return {"meta": _weather_meta(env, hourly, adv), "hourly": hourly}
+
+
+__all__ = ["load_local_walk_graph", "build_local_graph", "route_from_gps", "gps_map_payload",
+           "weather_payload"]
