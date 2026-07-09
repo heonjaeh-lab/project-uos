@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import datetime as dt
+import time
+from concurrent.futures import ThreadPoolExecutor
 from zoneinfo import ZoneInfo
 
 import requests
@@ -27,6 +29,23 @@ AIR_STATION = "송파구"
 _AIR_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty"
 _FCST_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
 _BASE_TIMES = ["2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"]
+
+# 기상·대기 TTL 캐시 — 같은 격자·같은 시각의 중복/재방문 호출을 없앤다(값 갱신이 시간 단위라
+# 15분 캐시로 충분). build_env_at·hourly_risk_series가 예보·대기질을 각각 호출하던 중복 제거의 핵심.
+_WX_CACHE: dict = {}
+_WX_TTL_S = 900
+
+
+def _wx_cached(key, producer, ttl: float = _WX_TTL_S):
+    """성공 결과만 TTL 캐시. 실패(None/[])는 캐시하지 않아 다음 호출에서 재시도."""
+    hit = _WX_CACHE.get(key)
+    now = time.monotonic()
+    if hit is not None and now - hit[0] < ttl:
+        return hit[1]
+    val = producer()
+    if val is not None and val != []:
+        _WX_CACHE[key] = (now, val)
+    return val
 
 
 def _season(month: int) -> Season:
@@ -63,51 +82,68 @@ def latlon_to_grid(lat: float, lon: float) -> tuple[int, int]:
 
 
 def fetch_air_quality(station: str = AIR_STATION) -> dict | None:
-    """송파구 측정소 실시간 PM10/PM2.5(㎍/㎥). 키/네트워크 실패 시 None."""
+    """송파구 측정소 실시간 PM10/PM2.5(㎍/㎥). 키/네트워크 실패 시 None. 15분 캐시."""
     key = config.get_key("DATA_GO_KR_KEY")
     if not key:
         return None
-    params = {"serviceKey": key, "returnType": "json", "numOfRows": 100,
-              "pageNo": 1, "sidoName": "서울", "ver": "1.3"}
-    try:
-        r = requests.get(_AIR_URL, params=params, timeout=15)
-        items = r.json()["response"]["body"]["items"]
-    except Exception:
-        return None
-    match = [it for it in items if it.get("stationName") == station] or items
-    if not match:
-        return None
-    it = match[0]
 
-    def _f(v):
+    def _do():
+        params = {"serviceKey": key, "returnType": "json", "numOfRows": 100,
+                  "pageNo": 1, "sidoName": "서울", "ver": "1.3"}
         try:
-            return float(v)
-        except (TypeError, ValueError):
+            r = requests.get(_AIR_URL, params=params, timeout=15)
+            items = r.json()["response"]["body"]["items"]
+        except Exception:
             return None
-    return {"pm10": _f(it.get("pm10Value")), "pm25": _f(it.get("pm25Value")),
-            "data_time": it.get("dataTime"), "station": it.get("stationName")}
+        match = [it for it in items if it.get("stationName") == station] or items
+        if not match:
+            return None
+        it = match[0]
+
+        def _f(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+        return {"pm10": _f(it.get("pm10Value")), "pm25": _f(it.get("pm25Value")),
+                "data_time": it.get("dataTime"), "station": it.get("stationName")}
+
+    return _wx_cached(("air", station), _do)
+
+
+def _forecast_items(nx: int, ny: int, when: dt.datetime) -> list[dict]:
+    """(nx,ny) 단기예보 raw item 목록 — 최근 base부터 역순 시도, 시간 단위 15분 캐시.
+
+    fetch_forecast(최근접 1건)·fetch_forecast_series(시퀀스)가 이 raw를 공유해
+    같은 격자·시각에 대한 중복 HTTP 호출을 없앤다.
+    """
+    key = config.get_key("DATA_GO_KR_KEY")
+    if not key:
+        return []
+
+    def _do():
+        for back in (0, 1):
+            base_date = (when.date() - dt.timedelta(days=back)).strftime("%Y%m%d")
+            for bt in _BASE_TIMES:
+                params = {"serviceKey": key, "dataType": "JSON", "numOfRows": 1000,
+                          "pageNo": 1, "base_date": base_date, "base_time": bt, "nx": nx, "ny": ny}
+                try:
+                    items = requests.get(_FCST_URL, params=params, timeout=15
+                                         ).json()["response"]["body"]["items"]["item"]
+                except Exception:
+                    continue
+                if items:
+                    return items
+        return []
+
+    return _wx_cached(("fcst", nx, ny, when.strftime("%Y%m%d%H")), _do)
 
 
 def fetch_forecast(nx: int = SONGPA_NX, ny: int = SONGPA_NY, when: dt.datetime | None = None) -> dict | None:
     """단기예보에서 `when`(없으면 현재)에 가장 가까운 시각의 기온·습도·풍속."""
-    key = config.get_key("DATA_GO_KR_KEY")
-    if not key:
-        return None
     when = when or dt.datetime.now(SEOUL)
-    # 최근 발표 base 부터 역순으로 시도(오래된 base도 향후 몇 일치 예보 포함).
-    for back in (0, 1):
-        base_date = (when.date() - dt.timedelta(days=back)).strftime("%Y%m%d")
-        for bt in _BASE_TIMES:
-            params = {"serviceKey": key, "dataType": "JSON", "numOfRows": 800,
-                      "pageNo": 1, "base_date": base_date, "base_time": bt, "nx": nx, "ny": ny}
-            try:
-                r = requests.get(_FCST_URL, params=params, timeout=15)
-                items = r.json()["response"]["body"]["items"]["item"]
-            except Exception:
-                continue
-            if items:
-                return _nearest_forecast(items, when)
-    return None
+    items = _forecast_items(nx, ny, when)
+    return _nearest_forecast(items, when) if items else None
 
 
 def _nearest_forecast(items: list[dict], when: dt.datetime) -> dict:
@@ -144,46 +180,32 @@ def _pcp_mm(v) -> float | None:
 def fetch_forecast_series(nx: int = SONGPA_NX, ny: int = SONGPA_NY,
                           when: dt.datetime | None = None, hours: int = 12) -> list[dict]:
     """`when`부터 시간별 예보(기온·습도·풍속) 시퀀스. 위험지수를 시간 단위로 낼 때 쓴다."""
-    key = config.get_key("DATA_GO_KR_KEY")
-    if not key:
-        return []
     when = when or dt.datetime.now(SEOUL)
-    for back in (0, 1):
-        base_date = (when.date() - dt.timedelta(days=back)).strftime("%Y%m%d")
-        for bt in _BASE_TIMES:
-            params = {"serviceKey": key, "dataType": "JSON", "numOfRows": 1000,
-                      "pageNo": 1, "base_date": base_date, "base_time": bt, "nx": nx, "ny": ny}
-            try:
-                items = requests.get(_FCST_URL, params=params, timeout=15
-                                     ).json()["response"]["body"]["items"]["item"]
-            except Exception:
-                continue
-            if not items:
-                continue
-            by_time: dict[str, dict] = {}
-            for it in items:
-                by_time.setdefault(it["fcstDate"] + it["fcstTime"], {})[it["category"]] = it["fcstValue"]
-            target = when.strftime("%Y%m%d%H%M")
+    items = _forecast_items(nx, ny, when)
+    if not items:
+        return []
+    by_time: dict[str, dict] = {}
+    for it in items:
+        by_time.setdefault(it["fcstDate"] + it["fcstTime"], {})[it["category"]] = it["fcstValue"]
+    target = when.strftime("%Y%m%d%H%M")
 
-            def _f(v):
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    return None
-            series = []
-            for stamp in sorted(by_time):
-                if int(stamp) < int(target):  # 과거 예보 제외(stamp/target 모두 YYYYMMDDHHMM)
-                    continue
-                v = by_time[stamp]
-                series.append({"stamp": stamp, "air_temp_c": _f(v.get("TMP")),
-                               "humidity_pct": _f(v.get("REH")), "wind_ms": _f(v.get("WSD")),
-                               "pty": int(_f(v.get("PTY")) or 0), "pop": _f(v.get("POP")),
-                               "pcp_mm": _pcp_mm(v.get("PCP"))})
-                if len(series) >= hours:
-                    break
-            if series:
-                return series
-    return []
+    def _f(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+    series = []
+    for stamp in sorted(by_time):
+        if int(stamp) < int(target):  # 과거 예보 제외(stamp/target 모두 YYYYMMDDHHMM)
+            continue
+        v = by_time[stamp]
+        series.append({"stamp": stamp, "air_temp_c": _f(v.get("TMP")),
+                       "humidity_pct": _f(v.get("REH")), "wind_ms": _f(v.get("WSD")),
+                       "pty": int(_f(v.get("PTY")) or 0), "pop": _f(v.get("POP")),
+                       "pcp_mm": _pcp_mm(v.get("PCP"))})
+        if len(series) >= hours:
+            break
+    return series
 
 
 def hourly_risk_series(when: dt.datetime | None = None, hours: int = 12,
@@ -239,8 +261,12 @@ def build_env_at(lat: float, lon: float,
     """
     when = when or dt.datetime.now(SEOUL)
     nx, ny = latlon_to_grid(lat, lon)
-    air = fetch_air_quality() or {}
-    fcst = fetch_forecast(nx=nx, ny=ny, when=when) or {}
+    # 대기질·예보는 서로 독립적인 느린 외부 호출 → 병렬로 받아 지연을 절반으로 줄인다.
+    with ThreadPoolExecutor(max_workers=2) as _ex:
+        _f_air = _ex.submit(fetch_air_quality)
+        _f_fcst = _ex.submit(fetch_forecast, nx, ny, when)
+        air = _f_air.result() or {}
+        fcst = _f_fcst.result() or {}
     missing: set[str] = set()
 
     air_temp = fcst.get("air_temp_c")

@@ -46,7 +46,8 @@ def route(
 ) -> JSONResponse:
     dest = (dest_lat, dest_lon) if dest_lat is not None and dest_lon is not None else None
     try:
-        payload = gps_map_payload(lat, lon, dest=dest)
+        # GPS 앱 프로파일: ~1.5km 루프(그래프 반경↓ → 콜드 응답 빠르게). 근거: 계획 T6 성능 측정.
+        payload = gps_map_payload(lat, lon, dest=dest, dist_m=1000, target_m=1500)
     except Exception:  # 엔진/외부 API 실패 → 502(프론트가 데모 폴백)
         logger.exception("route build failed (lat=%s lon=%s)", lat, lon)  # 실오류는 서버 로그로만
         raise HTTPException(status_code=502, detail="route build failed")  # 키 유출 방지: 예외 문자열 미노출
