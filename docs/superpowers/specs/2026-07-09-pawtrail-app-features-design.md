@@ -1,77 +1,70 @@
-# 조심해야댕(PawTrail) 앱 — 지도/게임화 기능 이식 설계
+# 조심해야댕(PawTrail) 앱 — v5 디자인 리스타일 + 지도/게임화 기능 이식 설계
 
-- 작성일: 2026-07-09
+- 작성일: 2026-07-09 (v5 디자인 확정 반영해 개정)
 - 대상 앱: `docs/app/` (생성원본: `scripts/make_app.py`)
-- 원본 기능: `~/Downloads/PawTrail 안전 산책 UI 3/조심해야댕.dc.html` (디자인캔버스 export)
-- 상태: **승인됨** (사용자 "이대로 진행해줘")
+- **기능 원본**: `~/Downloads/PawTrail 안전 산책 UI 3/조심해야댕.dc.html` (지도·안전지점·코인·댕꾸·상점)
+- **디자인 원본(개선본 v5)**: `~/Downloads/Shared link 2/조심해야댕.dc.html`
+- 상태: **승인됨** (지도=네이버+실제경로, 코인=산책하며 줍기)
 
 ## 1. 목표
 
-`UI 3` 폴더의 완성된 7개 화면·게임화 기능을 **내 앱의 주황(#F1592A)/Gothic A1 디자인으로 리스킨해 이식**하고, 지도를 **네이버 지도(Dynamic Map)** 로 교체하되 **실제 Azure GPS 라우팅을 유지**한다.
+내 앱을 **v5 디자인(코랄/크림·Pretendard+Jua·3D 이모지·걷는 강아지 영상)으로 전면 리스타일**하고, `UI 3`의 기능(**네이버 지도 + 실제 경로, 산책하며 코인 줍기, 댕꾸(강아지 고르기+옷 입히기), 상점**)을 v5 디자인 언어로 이식한다. 데이터·라우팅 로직(DATA/API_BASE/Azure)은 유지한다.
 
-원본(UI 3)은 React식 `support.js` 런타임 + 초록/크림 테마. 내 앱은 **바닐라 JS + Leaflet + 주황 테마**. → 로직을 바닐라 JS로 옮기고 리스킨한다.
+> v5 원본은 line 252에서 `https://heonjaeh-lab.github.io/project-uos/app/assets/mandu.png`를 참조 → **v5는 곧 내 앱(docs/app)의 목표 디자인**이다. 즉 v5의 마크업/스타일을 가져와 내 앱의 데이터 배선에 얹는다.
 
 ## 2. 아키텍처 / 작업 위치
 
-- **모든 수정은 `scripts/make_app.py`의 `HTML` 템플릿 문자열에서** 한다. 빌드하면 `docs/app/index.html` + `docs/app/조심해야댕.html`이 생성된다(끝에서 `__DATA__`/`__API_BASE__` 치환).
-- 신규 플레이스홀더 `__NAVER_KEY__` 추가 → `make_app.py`가 `.env`의 `NAVER_MAP_KEY`를 빌드 시 주입(현재 `API_BASE`와 동일 패턴). `make_app.py`가 `.env`를 읽도록 로더 추가.
-- 이미지 에셋: `UI 3/assets/`의 png → **웹용 압축**(리사이즈·최적화) 후 `docs/app/assets/`로 복사.
-- 엔진/서버/`map_data.json`/위험지수/라우팅 로직은 **변경하지 않는다**. 코인 위치는 클라이언트에서 경로 지오메트리로 생성.
+- **모든 수정은 `scripts/make_app.py`의 `HTML` 템플릿 문자열**. 빌드 → `docs/app/index.html`(+`조심해야댕.html`) 생성(`__DATA__`/`__API_BASE__` 치환).
+- 신규 플레이스홀더 `__NAVER_KEY__` 추가 → `.env`의 `NAVER_MAP_KEY`(=`86ibnd4q5w`, 검증됨) 주입. make_app.py가 `.env`를 읽도록 로더 추가.
+- 엔진/서버/`map_data.json`/위험지수/라우팅 로직은 **변경 안 함**. 코인 위치는 경로 지오메트리로 클라이언트 생성.
 
-## 3. 화면 (7개)
+## 3. 디자인 토큰 (v5, 리스타일 기준)
 
-| 화면 | 기존 | 작업 |
+- 폰트: 본문 **Pretendard**(jsdelivr CDN) + 디스플레이 **Jua**(워드마크·대형 숫자/제목).
+- 색: 폰프레임 `#FDF3F0`, 페이지 `#F3E4DD`/radial `#FBEFEA→#F0DDD5`; 텍스트 `#23201B`; 워드마크 빨강 `#FF3131`; 코랄 `#EC968C`/`#F2A492`(버튼·위험카드), 라이트 `#FCEDE8`/`#FCE7DF`; 정보카드 블루 `#EAF1F6`; 안전 그린 `#74C39B`/`#CFE3D0`; 골드 `#F1C36B`; 보더 `#E5DFD2`.
+- 버튼: 코랄 bg, `#23201B` 텍스트, `border-radius:20px`, 큰 소프트 섀도우.
+- 아이콘: **3D 이모지** `cdn.jsdelivr.net/gh/shuding/fluentui-emoji-unicode/assets/{code}_3d.png`(🐾1f43e·🌲1f332·📍1f4cd·🐕1f415·💩1f4a9·💧1f4a7·🎉1f389 등). 폰트 CDN처럼 외부 로드 허용.
+- 애니메이션: `floatPaw`·`popIn`·`riseIn`·`pulseDot`·`sigPulse`.
+
+## 4. 화면 (v5 리스타일 + 신규)
+
+| 화면 | 내용 | 출처 |
 |------|------|------|
-| 홈 | 있음 | 강아지 아바타(옷 반영)→댕꾸, 코인 잔액칩→상점, 지도 진입 추가 |
-| 안전경로지도 | 부분(경로화면) | 네이버 지도 + 레이어칩 + 안전지점 마커 + 경로 상세카드 (신규 화면화) |
-| POI목록 / POI상세 | 부분 | 급수대·놀이터 등 목록 + 🎁보상 표시 |
-| 산책중 | 있음(정적) | 진행 애니메이션 + 경로 위 코인 줍기 |
-| 댕꾸 | **신규** | 견종 도감 선택 + 옷 입히기/변경/벗기기 |
-| 상점 | **신규** | 옷 6종 구매(코인 차감) |
+| 홈 | 걷는 강아지 히어로 + 워드마크 + 코랄 위험카드(신호등) + 시간별 위험지수 | v5 |
+| 안전한 길(경로/지도) | 네이버 지도 + 코랄 경로선 + POI마커 + 추천 경로카드(거리/시간/그늘/안전지점) | v5+UI3 |
+| 산책중 | 진행 + "다음 안전지점까지 Nm" + 코인 줍기 | v5+UI3 |
+| 완료 | 🎉 + 만두 + 격려 메시지 | v5 |
+| 프로필/온보드 | 견종·단두종·지병 → 개인화 안내 | v5 |
+| 기록 | 주간 함께한 시간 + **대변·소변 주간 막대그래프**(poopWeeks) | v5 |
+| **댕꾸** | 강아지 고르기(도감) + 옷 입히기/변경/벗기기 | UI3(신규, v5 스타일) |
+| **상점** | 옷 6종 구매(코인 차감) | UI3(신규, v5 스타일) |
 
-## 4. 지도 — 네이버 Dynamic Map + 실제 경로
+## 5. 걷는 강아지 히어로 (v5 시그니처)
 
-- `<head>`에 로더: `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=__NAVER_KEY__`
-- `getMap()`/`renderMap()`를 Leaflet → 네이버로 교체:
-  - `naver.maps.Map`, `naver.maps.Polyline`(그늘색 세그먼트), `naver.maps.Marker`(POI/출·착/강아지, `icon.content`로 커스텀 HTML)
-  - 입력은 기존 `DATA.routes[].segs[].line/shade`, `DATA.routes[].pois` 그대로 → **실제 라우팅 유지**
-- `window.navermap_authFailure` 정의 → 인증 실패 시 안내 메시지 노출
-- **사용자 액션(콘솔)**: Maps Application 생성 + Dynamic Map 선택 + Web 서비스 URL 등록(`https://heonjaeh-lab.github.io`, `http://localhost:8000`, 필요시 `file://`)
+- 숨긴 `<video src="assets/walk.mp4" muted loop playsinline>` + `<canvas>`.
+- 매 프레임(≈24fps) `drawImage`(영역 SX0/SY155/SW720/SH850→270×319) → `getImageData` → **테두리에서 플러드필로 어두운 배경(max(rgb)<60) 제거** → 가장자리 알파 페더 → `putImageData`. drop-shadow로 입체감.
+- v5 HTML 672-721의 `videoRef`/`dogCanvasRef` 로직을 **바닐라로 그대로 이식**(프레임워크 비의존). `walk.mp4`를 `docs/app/assets/`로 복사.
 
-## 5. 코인 — 산책하며 줍기
+## 6. 지도 — 네이버 Dynamic Map + 실제 경로
 
-- 선택 경로 폴리라인 위에 코인 N개 균등 배치.
-- 산책 진행(강아지 마커 전진; GPS 가능 시 실측 위치)에서 근접 코인 +1씩 획득 + **완주 보너스**.
-- 잔액은 `localStorage` 저장. 초기값 1000.
+- `<head>` 로더 `...maps.js?ncpKeyId=__NAVER_KEY__`. `getMap()`/`renderMap()`를 Leaflet→네이버로 교체(`naver.maps.Map/Polyline/Marker`), 입력은 기존 `DATA.routes[].segs/pois` 유지 → 실제 라우팅 유지. 경로선 코랄. `window.navermap_authFailure` 안내.
+- 콘솔(완료됨): Maps App `86ibnd4q5w`, Dynamic Map 선택, Web URL에 `https://heonjaeh-lab.github.io`·`http://localhost:8000` 등록.
 
-## 6. 댕꾸 (강아지 고르기 + 옷)
+## 7. 코인 — 산책하며 줍기
 
-- 견종 도감: **말티즈 / 포메라니안 / 골든두들** 중 활성 강아지 선택.
-- 옷: 보유 옷 **입히기 / 변경 / 벗기기**. 조합 이미지 `assets/dog-{breed}-{outfit}.png`(없으면 기본 `dog-{breed}.png`). 홈 아바타·산책 마커에 즉시 반영.
-- 로직: `dressedImg(breed, outfit)`, `DRESSED` 조합 맵, `equip/remove`.
+- 선택 경로 폴리라인 위 코인 균등 배치 → 진행하며 근접 코인 +1 + 완주 보너스. `localStorage` 저장(초기 1000).
 
-## 7. 상점
+## 8. 댕꾸 / 상점 (UI3 기능, v5 스타일)
 
-- 옷 6종: 턱시도(100) · 교복(200) · 군복/메시/웨딩/두산(각 300), 등급 라벨(스탠다드/레어/에픽).
-- 구매 → 코인 차감·`owned` 추가. 이미 보유/코인 부족 시 토스트 메시지.
-- 진입: 홈 코인칩 + 댕꾸 화면.
+- 댕꾸: 견종 도감(말티즈/포메/골든두들) 선택 + 보유 옷 입히기/변경/벗기기. 조합 이미지 `assets/dog-{breed}-{outfit}.png`(없으면 기본) → 홈 히어로·산책 마커 반영.
+- 상점: 옷 6종(턱시도100·교복200·군복/메시/웨딩/두산 각300) 구매 → 코인 차감/보유/부족 메시지.
+- 상태 `localStorage` `{coins, owned:[], breed, outfit}`. **가정**: 댕꾸 견종 = 프로필 활성견과 연동.
 
-## 8. 상태 / 영속
+## 9. 에셋
 
-- `localStorage` 키 하나에 `{coins, owned:[], breed, outfit}` 저장/복원.
-- **가정**: 댕꾸에서 고른 견종을 마이/프로필의 활성 견종과 연동(아바타=활성견). 분리 원하면 조정.
+- `walk.mp4`(≈0.5MB) + 강아지 21장(기본3+조합18) + 아이템 6장 + `coin.png` → **웹용 압축**(sips 리사이즈·최적화) 후 `docs/app/assets/` 복사. 3D 이모지는 CDN 사용.
 
-## 9. 디자인 (리스킨)
-
-- 내 앱이 이미 "디자인 개선본"(주황 #F1592A + Gothic A1)이므로, UI3(초록/크림)의 **구조만** 가져와 주황 테마로 리스킨. 기존 CSS 컴포넌트(`.card/.btn/.chip/.rchip/.toggle/.tab` 등) 재사용.
-- "현재 디자인 유지 = 개선본 일치"가 자연히 충족.
-
-## 10. 에셋
-
-- 강아지 21장(기본3 + 착용조합18) + 아이템 6장 + `coin.png`.
-- 원본 1.5~2.4MB/장 → 압축(리사이즈 ~800px, 최적화)해 저장소·Pages 부담 완화.
-
-## 11. 범위 밖 / 리스크
+## 10. 범위 밖 / 리스크
 
 - 범위 밖: 엔진/서버/데이터/위험지수/라우팅 알고리즘.
-- 리스크: 네이버 도메인 미등록 시 인증 실패(사용자 콘솔 작업 필요), `file://` 직접 열기 제약(로컬 서버 권장), 에셋 용량.
+- 리스크: 네이버 도메인/키(완료), 캔버스 키잉이 walk.mp4 배경(어두움) 가정에 의존, 에셋 용량, 3D 이모지·Pretendard CDN 오프라인 미표시.
