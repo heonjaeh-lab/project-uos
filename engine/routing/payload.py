@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import math
 
+from engine.shade.sky import effective_shade
+
 
 def edge_polyline(G, u, v) -> tuple[list[list[float]], float]:
     """엣지 (u,v)의 최저비용 평행엣지 geometry 좌표열 + 그늘비율.
@@ -24,14 +26,22 @@ def edge_polyline(G, u, v) -> tuple[list[list[float]], float]:
             float(best.get("shade_ratio", 0.0)))
 
 
-def route_payload(G, r, label: str) -> dict:
-    """RouteResult → {label, shade, distance_m, est_time_min, max_risk, segs, pois}.
+def route_payload(G, r, label: str, clearness: float = 1.0) -> dict:
+    """RouteResult → {label, shade, shade_eff, distance_m, est_time_min, max_risk, segs, pois}.
 
-    segs 각 원소는 {line:[[lon,lat],...], shade} — 프론트가 그늘값으로 색칠한다.
+    segs 각 원소는 {line:[[lon,lat],...], shade, shade_eff} — 프론트가 그늘값으로 색칠한다.
+
+    `shade`/`seg.shade` 는 **기하 그늘**(맑은 하늘 가정)로 불변이며, `shade_eff`/`seg.shade_eff`
+    는 하늘 맑은 정도(`clearness` 0~1, 기본 1.0=맑음/현행)를 반영한 **실질 그늘**이다.
+    clearness=1.0 이면 shade_eff == shade (회귀 없음). 흐릴수록 shade_eff 가 커진다.
     """
-    segs = [{"line": (p := edge_polyline(G, u, v))[0], "shade": p[1]}
-            for u, v in zip(r.node_path, r.node_path[1:])]
+    segs = []
+    for u, v in zip(r.node_path, r.node_path[1:]):
+        line, sh = edge_polyline(G, u, v)
+        segs.append({"line": line, "shade": sh,
+                     "shade_eff": round(effective_shade(sh, clearness), 4)})
     return {"label": label, "shade": round(r.avg_shade_ratio, 3),
+            "shade_eff": round(effective_shade(r.avg_shade_ratio, clearness), 3),
             "distance_m": round(r.distance_m), "est_time_min": round(r.est_time_min, 1),
             "max_risk": r.max_risk_level.value, "segs": segs,
             "pois": [{"lon": p.lon, "lat": p.lat, "type": p.poi_type.value, "name": p.name}

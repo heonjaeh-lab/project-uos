@@ -25,6 +25,7 @@ from engine.routing import (
     recommend_routes,
 )
 from engine.schemas import CostParams, RiskParams
+from engine.shade.sky import sky_clearness
 from engine.sources import vworld
 
 SEOUL = ZoneInfo("Asia/Seoul")
@@ -116,6 +117,9 @@ def _weather_meta(env, hourly: list[dict], adv) -> dict:
         "humidity_pct": env.humidity_pct,
         "pm10": env.pm10,
         "precip_prob_pct": env.precip_prob_pct,
+        # 하늘상태(SKY)와 하늘 맑은 정도 — 프론트가 '실질 그늘' 라벨/보정에 사용.
+        "sky_code": env.sky_code,
+        "clearness": sky_clearness(env.sky_code),
     }
 
 
@@ -157,7 +161,9 @@ def gps_map_payload(lat: float, lon: float, dest: tuple[float, float] | None = N
         opts = recommend_loops(G, orig, target_m, pois, cost_params=cost_params or CostParams())
         dst = orig
 
-    routes = [route_payload(G, o["route"], o["label"]) for o in opts]
+    # 하늘 맑은 정도(구름 반영) — route_payload 가 기하 그늘에 곱해 실질 그늘(shade_eff)을 낸다.
+    clearness = sky_clearness(env.sky_code)
+    routes = [route_payload(G, o["route"], o["label"], clearness=clearness) for o in opts]
     for i, r in enumerate(routes):
         r["id"] = f"r{i}"  # 프론트가 인덱스 대신 안정적 id로 경로를 선택할 수 있게.
     bbox = routes_bbox(routes, center=(lat, lon))

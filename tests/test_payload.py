@@ -46,6 +46,30 @@ def test_route_payload_shape():
                             "type": "water_fountain", "name": "급수대"}
 
 
+def test_route_payload_clear_shade_eff_equals_geometric():
+    # clearness 기본 1.0(맑음) → shade_eff == shade, seg.shade_eff == seg.shade (회귀 없음)
+    G = _toy_graph()
+    r = RouteResult(node_path=[1, 3, 2], avg_shade_ratio=0.6,
+                    max_risk_level=RiskLevel.green)
+    p = route_payload(G, r, "x")
+    assert p["shade_eff"] == p["shade"]
+    for s in p["segs"]:
+        assert s["shade_eff"] == pytest.approx(s["shade"])
+
+
+def test_route_payload_overcast_raises_effective_and_preserves_raw():
+    # 흐림(clearness=0.1) → 실질 그늘↑, 기하 raw 는 보존
+    G = _toy_graph()
+    r = RouteResult(node_path=[1, 3, 2], avg_shade_ratio=0.6,
+                    max_risk_level=RiskLevel.green)
+    p = route_payload(G, r, "x", clearness=0.1)
+    assert p["shade"] == 0.6                       # raw 보존
+    assert p["shade_eff"] == pytest.approx(0.96)   # 1-(1-0.6)*0.1
+    assert p["shade_eff"] > p["shade"]
+    for s in p["segs"]:
+        assert s["shade_eff"] >= s["shade"]        # 세그도 실질 그늘 >= 기하
+
+
 def test_routes_bbox_covers_all_points_with_pad():
     G = _toy_graph()
     r = RouteResult(node_path=[1, 3, 2], max_risk_level=RiskLevel.green)

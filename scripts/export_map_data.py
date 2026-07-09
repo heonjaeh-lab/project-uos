@@ -12,6 +12,7 @@ import os
 
 from engine.risk import walk_advisory
 from engine.routing import nearest_node, recommend_routes, route_payload
+from engine.shade.sky import sky_clearness
 from engine.sources import osm
 from engine.sources.real_graph import build_real_routing_graph
 from engine.sources.weather import hourly_risk_series
@@ -30,7 +31,8 @@ def main():
     orig = nearest_node(G, *GPS_LATLON)
     dest = nearest_node(G, *DEST_LATLON)
     opts = recommend_routes(G, orig, dest, pois=pois)
-    routes = [route_payload(G, o["route"], o["label"]) for o in opts]
+    clearness = sky_clearness(env.sky_code) if env else 1.0
+    routes = [route_payload(G, o["route"], o["label"], clearness=clearness) for o in opts]
 
     # bbox: 모든 경로 정점 + 여백
     xs = [p[0] for rt in routes for s in rt["segs"] for p in s["line"]]
@@ -75,6 +77,8 @@ def main():
             "humidity_pct": env.humidity_pct if env else None,
             "pm10": env.pm10 if env else None,
             "precip_prob_pct": env.precip_prob_pct if env else None,
+            "sky_code": env.sky_code if env else None,
+            "clearness": clearness,
         },
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

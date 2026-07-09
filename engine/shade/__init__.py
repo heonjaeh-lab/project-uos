@@ -25,6 +25,7 @@ from engine.shade.shade import (
     load_graph,
     load_trees,
 )
+from engine.shade.sky import effective_shade, sky_clearness
 from engine.shade.solar import SunPosition, shadow_vector, sun_position
 
 __all__ = [
@@ -32,6 +33,9 @@ __all__ = [
     "SunPosition",
     "sun_position",
     "shadow_vector",
+    # sky/cloud (실질 그늘 = 기하 그늘 × 하늘 맑은 정도)
+    "sky_clearness",
+    "effective_shade",
     # inputs / params
     "Building",
     "Tree",

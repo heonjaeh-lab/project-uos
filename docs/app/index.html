@@ -468,8 +468,15 @@ const LVLABEL={green:'좋음',yellow:'주의',red:'위험'};
 const $=id=>document.getElementById(id);
 // 비/흐림이면 직사광선이 없어 기하 그늘 %가 무의미 → 표시 대체.
 function rainNow(){return rainDemo||!!(DATA.meta&&DATA.meta.rain);}
-function shadeTag(s){return rainNow()?'그늘 —':'그늘 '+Math.round(s*100)+'%';}
-function shadeValOnly(s){return rainNow()?'—':Math.round(s*100)+'%';}
+// 구름 반영 '실질 그늘': 엔진이 준 shade_eff(하늘 맑은 정도 반영) 우선, 없으면 기하 shade로 폴백.
+function effVal(o){if(o==null)return 0;return (o.shade_eff!=null)?o.shade_eff:(o.shade||0);}
+function skyCode(){return (DATA.meta&&DATA.meta.sky_code!=null)?DATA.meta.sky_code:null;}
+function cloudy(){const s=skyCode();return s===3||s===4;}                 // 구름많음/흐림
+function skyWord(){const s=skyCode();return s===4?'흐림':s===3?'구름 많음':s===1?'맑음':'';}
+function skyTag(){const s=skyCode();return s===4?' · ☁️흐림':s===3?' · ⛅구름많음':s===1?' · ☀️맑음':'';}
+// o = 경로/세그 객체. 비면 '그늘 —'(직사광 없음), 흐림/구름많음이면 '실질 그늘', 맑음이면 '그늘'.
+function shadeTag(o){if(rainNow())return '그늘 —';return (cloudy()?'실질 그늘 ':'그늘 ')+Math.round(effVal(o)*100)+'%'+skyTag();}
+function shadeValOnly(o){return rainNow()?'—':Math.round(effVal(o)*100)+'%';}
 
 // ---- 3D 이모지(fluentui) 주입 ----
 const EMO='https://cdn.jsdelivr.net/gh/shuding/fluentui-emoji-unicode/assets/';
@@ -636,7 +643,7 @@ function renderMap(elId,routeIdx,opts){
   const b=new naver.maps.LatLngBounds(toLL(rt.segs[0].line[0]),toLL(rt.segs[0].line[0]));
   for(const sg of rt.segs){const path=sg.line.map(toLL);path.forEach(ll=>b.extend(ll));
     M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:'#fff',strokeWeight:9,strokeOpacity:.95,strokeLineCap:'round',strokeLineJoin:'round'}));
-    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:shadeColor(sg.shade),strokeWeight:5,strokeOpacity:1,strokeLineCap:'round',strokeLineJoin:'round'}));}
+    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:shadeColor(effVal(sg)),strokeWeight:5,strokeOpacity:1,strokeLineCap:'round',strokeLineJoin:'round'}));}
   if(opts.detail!==false&&rt.pois)for(const p of rt.pois)
     naverMarker(M,p.lat,p.lon,`<div class="mk-poi" style="--c:${poiColor(p.type)}"></div>`,8,8,40);
   const first=rt.segs[0].line[0],last=rt.segs[rt.segs.length-1].line.slice(-1)[0];
@@ -645,7 +652,7 @@ function renderMap(elId,routeIdx,opts){
   if(opts.pos){const mid=rt.segs[Math.floor(rt.segs.length*0.42)].line[0];
     naverMarker(M,mid[1],mid[0],`<div class="mk-dog"><img src="${dressedImg()}"></div>`,21,21,1000);}
   M.map.fitBounds(b);
-  M.legend.style.display='';M.legend.innerHTML=`<span class="ldot"></span>${shadeTag(rt.shade)}`;
+  M.legend.style.display='';M.legend.innerHTML=`<span class="ldot"></span>${shadeTag(rt)}`;
 }
 function poiColor(t){return {animal_hospital:'#EF5350',toilet:'#2F9BD6',park:'#7BAE3C',water_fountain:'#2F9BD6',pet_shop:'#EF9E22'}[t]||'#EC968C';}
 const POI_KO={animal_hospital:'동물병원',toilet:'공중화장실',park:'공원',water_fountain:'급수대',pet_shop:'펫샵'};
@@ -714,7 +721,7 @@ function renderHome(){
   // 추천 경로(최고 그늘)
   const top=DATA.routes[0];
   $('homeRouteName').textContent=(isDemo?'데모(송파) · ':'')+(top.label||'추천')+' 코스';
-  $('homeRouteMeta').textContent=`${(top.distance_m/1000).toFixed(1)}km · 약 ${Math.round(top.est_time_min)}분 · ${shadeTag(top.shade)}`;
+  $('homeRouteMeta').textContent=`${(top.distance_m/1000).toFixed(1)}km · 약 ${Math.round(top.est_time_min)}분 · ${shadeTag(top)}`;
   renderMap('homeMap',0,{detail:false});
   // 비/위험이면 CTA 막기
   const cta=$('homeCta');
@@ -736,12 +743,12 @@ function renderRoute(){
       <div class="rstats">
         <div class="rstat"><div class="v">${(r.distance_m/1000).toFixed(1)}km</div><div class="k">거리</div></div>
         <div class="rstat"><div class="v">${Math.round(r.est_time_min)}분</div><div class="k">예상 시간</div></div>
-        <div class="rstat sh"><div class="v">${shadeValOnly(r.shade)}</div><div class="k">평균 그늘</div></div>
+        <div class="rstat sh"><div class="v">${shadeValOnly(r)}</div><div class="k">${cloudy()&&!rainNow()?'실질 그늘':'평균 그늘'}</div></div>
         <div class="rstat"><div class="v">${r.pois.length}곳</div><div class="k">안전지점</div></div>
       </div></div>`;}).join('');
   const r=DATA.routes[sel];
-  const sp=Math.round(r.shade*100);
-  $('rNote').textContent=rainNow()?'지금은 비가 와서 직사광선이 없어요. 그늘 수치는 맑을 때 기준이라 참고만 하세요.':(sp>=70?`그늘이 ${sp}%라 발바닥이 시원해. 저녁 산책에 딱 좋아!`:sp>=50?`그늘 ${sp}%로 적당히 시원해. 물 자주 마시자.`:`그늘이 ${sp}%로 적어 햇볕이 많아. 짧게 다녀오자.`);
+  const sp=Math.round(effVal(r)*100);
+  $('rNote').textContent=rainNow()?'지금은 비가 와서 직사광선이 없어요. 그늘 수치는 맑을 때 기준이라 참고만 하세요.':cloudy()?`지금 ${skyWord()}이라 직사광이 적어요. 실질 그늘 ${sp}% — 자외선·더위 부담이 낮아 산책하기 좋아요.`:(sp>=70?`그늘이 ${sp}%라 발바닥이 시원해. 저녁 산책에 딱 좋아!`:sp>=50?`그늘 ${sp}%로 적당히 시원해. 물 자주 마시자.`:`그늘이 ${sp}%로 적어 햇볕이 많아. 짧게 다녀오자.`);
   const g=DATA.gps;
   $('poiList').innerHTML=r.pois.length?r.pois.map(p=>{const d=Math.round(haversine(g.lat,g.lon,p.lat,p.lon)/10)*10;
     return `<div class="poi"><span class="pic" style="background:${poiIconBg(p.type)}"><span style="width:15px;height:15px;border-radius:50%;background:${poiColor(p.type)}"></span></span><div style="flex:1"><div style="font-weight:700;font-size:14px">${POI_KO[p.type]||p.type}</div><div style="font-weight:500;font-size:12px;color:var(--sub)">${d}m · ${POI_SUB[p.type]||''}</div></div></div>`;}).join(''):'<div style="color:var(--muted);font-size:12.5px;padding:4px 2px">이 경로 주변 등록된 안전지점이 없어요.</div>';
@@ -802,7 +809,7 @@ function renderWalk(){
 
 // ================= 완료 =================
 function renderDone(){const r=DATA.routes[sel];
-  $('doneStats').innerHTML=[['거리',(r.distance_m/1000).toFixed(1)+'km'],['시간',Math.round(r.est_time_min)+'분'],['그늘',shadeValOnly(r.shade)]]
+  $('doneStats').innerHTML=[['거리',(r.distance_m/1000).toFixed(1)+'km'],['시간',Math.round(r.est_time_min)+'분'],['그늘',shadeValOnly(r)]]
     .map(([k,v])=>`<div style="flex:1;background:#fff;border-radius:18px;padding:15px 8px;text-align:center;box-shadow:0 6px 16px -10px rgba(60,50,30,.25)"><div class="num" style="font-size:22px;color:${k==='그늘'?'#26A99B':'var(--ink)'}">${v}</div><div style="font-weight:500;font-size:11px;color:var(--muted);margin-top:2px">${k}</div></div>`).join('');
   resolveEmoji($('s-done'));
 }
