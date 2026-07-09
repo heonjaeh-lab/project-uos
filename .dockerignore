@@ -1,0 +1,14 @@
+.venv
+.git
+__pycache__
+*.pyc
+data/cache
+data/demo
+cache
+docs
+tests
+_workspace
+*.jpeg
+*.pdf
+.env
+.playwright-mcp
