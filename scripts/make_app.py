@@ -184,7 +184,7 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
     </div>
     <div class="body" style="padding:0 20px 20px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-weight:700;font-size:12px;color:#9A928B;flex:1">📍 내 위치(GPS)에서 · 추천 3개 중 골라</span>
+        <span id="gpsHint" style="font-weight:700;font-size:12px;color:#9A928B;flex:1">📍 내 위치(GPS)에서</span>
         <button onclick="findRoute()" style="border:1.5px solid #F1592A;background:#FDEDE4;color:#C24E24;font-family:'Gothic A1';font-weight:800;font-size:11.5px;border-radius:999px;padding:5px 11px;cursor:pointer">📍 다시</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px" id="rchips"></div>
@@ -323,7 +323,7 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
   <!-- GPS 로딩 / 토스트 -->
   <div class="maploading" id="gpsLoading" style="border-radius:44px">
     <div class="spin"></div>
-    <div id="gpsLoadingMsg">내 위치에서 안전한 길을 찾는 중…<br><span style="font-size:11px;color:#B9AE9F">동네 지도를 처음 받는 중이면 조금 걸려요</span></div>
+    <div id="gpsLoadingMsg">내 위치에서 안전한 길을 찾는 중…<br><span style="font-size:11px;color:#B9AE9F">처음 방문한 동네는 20~40초 걸릴 수 있어요</span></div>
   </div>
   <div id="toast" style="position:absolute;left:16px;right:16px;top:54px;z-index:1300;display:none;background:#2E2A27;color:#fff;font-weight:700;font-size:12.5px;padding:11px 14px;border-radius:14px;box-shadow:0 8px 20px rgba(46,42,39,.3);text-align:center;animation:toastin .3s ease"></div>
 </div>
@@ -441,6 +441,7 @@ function renderHome(){
 
 // ---- 경로 ----
 function renderRoute(){
+  $('gpsHint').textContent=DATA.routes.length>1?`📍 내 위치(GPS)에서 · 추천 ${DATA.routes.length}개 중 골라`:'📍 내 위치(GPS)에서 · 안전 산책길';
   $('rchips').innerHTML=DATA.routes.map((r,i)=>`<div class="rchip ${i===sel?'on':''}" onclick="selectRoute(${i})"><div class="rl">${r.label}</div><div class="rm">그늘 ${Math.round(r.shade*100)}% · ${(r.distance_m/1000).toFixed(1)}km</div></div>`).join('');
   const r=DATA.routes[sel];
   $('rName').textContent=r.label+' 코스';
@@ -527,7 +528,7 @@ function findRoute(){
     {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
 }
 async function fetchRoute(lat,lon){
-  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),45000);  // 콜드 대비
+  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),75000);  // 콜드 대비(처음 방문 동네)
   try{
     const res=await fetch(`${API_BASE}/api/route?lat=${lat}&lon=${lon}`,{signal:ctrl.signal});
     if(!res.ok)throw new Error('http '+res.status);
