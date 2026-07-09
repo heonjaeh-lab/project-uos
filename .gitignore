@@ -25,3 +25,7 @@ secrets/
 .playwright-mcp/
 *.jpeg
 *.jpg
+
+# 하네스/임시 작업 산출물 (재생성 가능·비소스)
+.superpowers/
+_workspace/

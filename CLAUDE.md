@@ -28,3 +28,5 @@
 | 2026-07-08 | V-World 실측 건물높이 연동(engine/sources/vworld, 11.7만 동) → 경로 그늘 0.51→0.78 | engine/sources | OSM 휴리스틱 대비 그늘 정확도 대폭↑. 이상치 높이 클램프(≤555m). .env 도메인 필요 |
 | 2026-07-08 | GPS 로컬 라우팅 정식 기능(engine/sources/local_routing): 임의 좌표 주변 보행망+건물 온디맨드+타일캐시 → 서울 전역 지원. 기상 격자변환(latlon_to_grid)+build_env_at로 임의좌표 기상 일반화 | engine/sources | "서울 어디서든 GPS 경로" 요구. 콜드~20s/캐시 즉시. 테스트 76개 |
 | 2026-07-08 | 작동 앱 프로토타입(docs/app, scripts/make_app.py): '안전한 산책 동반자' 디자인 1:1 재현 + 실데이터 구동(홈/경로/산책중/완료). 시간별 위험지수·다중경로선택·GPS·비게이트·리라우팅 신규 UI | docs/app | 사용자 제작 UI에 엔진 기능 통합. Google폰트+로컬이미지라 파일로 직접 열기(Artifact 아님) |
+| 2026-07-09 | 버그 진단(코드 아닌 환경 원인 확정): 라이브 미푸시 구버전 배포 + file:// geolocation 차단 + 네이버키 도메인 미인증. 백엔드·앱코드는 정상 검증(Playwright E2E: 날씨/GPS 경로 Azure 왕복 성공) | (진단) | "날씨 갱신·GPS 경로 안 됨" 원인규명 — Azure는 살아있고 앱은 신버전만 로컬에 있었음 |
+| 2026-07-09 | 저장소 리팩토링(T0~T2): 미러 조심해야댕.html·미참조 dog-walk.png·명함 잔재(index.html+assets)·스테일 QA노트 삭제, _workspace→docs/design 이관, make_app TARGETS 정본1개화(부활방지), .gitignore(.superpowers/_workspace) + 로컬 산출물(cache·jpeg·playwright) 청소 | 전체 정리 | "폴더 방대·지저분" 정리, 다음 개선 대비. index.html 정본 md5 불변, pytest 회귀 없음 |

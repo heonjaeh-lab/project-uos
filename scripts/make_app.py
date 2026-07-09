@@ -16,8 +16,8 @@ import json
 import re
 
 SRC = "data/demo/map_data.json"
-CANON = "docs/app/index.html"                      # 디자인 원본
-TARGETS = ["docs/app/index.html", "docs/app/조심해야댕.html"]
+CANON = "docs/app/index.html"                      # 디자인 원본 = 유일 정본(수기)
+TARGETS = ["docs/app/index.html"]                  # 미러(조심해야댕.html)는 제거됨 — 정본 1개만 갱신
 
 with open(SRC, encoding="utf-8") as f:
     data = json.load(f)
