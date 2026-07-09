@@ -20,3 +20,8 @@ data/demo/
 .env.local
 *.key
 secrets/
+
+# 테스트/디버그 산출물 (playwright·스크린샷, 재생성 가능)
+.playwright-mcp/
+*.jpeg
+*.jpg
