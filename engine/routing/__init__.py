@@ -38,6 +38,7 @@ from engine.routing.graph_build import (
     inject_edge_attributes,
     load_songpa_graph,
 )
+from engine.routing.payload import edge_polyline, route_payload, routes_bbox
 from engine.routing.router import (
     assemble_route,
     find_route,
@@ -70,4 +71,8 @@ __all__ = [
     "assemble_route",
     "neighborhood_loop",
     "safe_view",
+    # payload
+    "edge_polyline",
+    "route_payload",
+    "routes_bbox",
 ]

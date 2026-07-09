@@ -8,11 +8,10 @@
 from __future__ import annotations
 
 import json
-import math
 import os
 
 from engine.risk import walk_advisory
-from engine.routing import nearest_node, recommend_routes
+from engine.routing import nearest_node, recommend_routes, route_payload
 from engine.sources import osm
 from engine.sources.real_graph import build_real_routing_graph
 from engine.sources.weather import hourly_risk_series
@@ -22,25 +21,7 @@ GPS_LATLON = (37.5030, 127.0930)   # 사용자 현재 위치(GPS)
 DEST_LATLON = (37.5050, 127.1060)
 OUT = "data/demo/map_data.json"
 
-
-def edge_polyline(G, u, v):
-    best = min(G[u][v].values(), key=lambda d: d.get("cost", math.inf))
-    geom = best.get("geometry")
-    if geom is not None and hasattr(geom, "coords"):
-        return [[round(x, 6), round(y, 6)] for x, y in geom.coords], float(best.get("shade_ratio", 0.0))
-    return ([[round(float(G.nodes[u]["x"]), 6), round(float(G.nodes[u]["y"]), 6)],
-             [round(float(G.nodes[v]["x"]), 6), round(float(G.nodes[v]["y"]), 6)]],
-            float(best.get("shade_ratio", 0.0)))
-
-
-def route_payload(G, r, label):
-    segs = [{"line": (p := edge_polyline(G, u, v))[0], "shade": p[1]}
-            for u, v in zip(r.node_path, r.node_path[1:])]
-    return {"label": label, "shade": round(r.avg_shade_ratio, 3),
-            "distance_m": round(r.distance_m), "est_time_min": round(r.est_time_min, 1),
-            "max_risk": r.max_risk_level.value, "segs": segs,
-            "pois": [{"lon": p.lon, "lat": p.lat, "type": p.poi_type.value, "name": p.name}
-                     for p in r.pois_on_route]}
+# route_payload / edge_polyline 은 engine.routing.payload 에서 공용화(GPS 서버와 동일 직렬화).
 
 
 def main():
