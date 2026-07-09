@@ -98,6 +98,7 @@ body{margin:0;font-family:'Pretendard','Jua',system-ui,sans-serif;color:var(--in
 .poi{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 5px 14px -10px rgba(60,50,30,.25)}
 .poi .pic{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
 .mapwrap{border-radius:24px;overflow:hidden;position:relative;background:#e7eee1;box-shadow:0 8px 22px -12px rgba(60,50,30,.3)}
+.mapexp{position:absolute;top:10px;right:10px;z-index:60;width:34px;height:34px;border:none;border-radius:11px;background:rgba(255,255,255,.94);box-shadow:0 3px 10px -3px rgba(0,0,0,.35);font-size:15px;line-height:1;cursor:pointer;color:#3C6E5A}
 .legend{position:absolute;top:12px;left:12px;z-index:1000;pointer-events:none;display:flex;align-items:center;gap:6px;
   background:rgba(255,255,255,.92);padding:6px 12px;border-radius:999px;font-weight:600;font-size:12px;color:var(--ink)}
 .legend .ldot{width:9px;height:9px;border-radius:3px;background:#26A99B;display:inline-block;flex:none}
@@ -163,6 +164,13 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 .infobox{background:#EAF1F6;border-radius:20px;padding:14px 16px;font-size:12.5px;font-weight:500;color:var(--ink);line-height:1.55}
 </style></head><body>
 <div class="phone">
+  <!-- 전체화면 인터랙티브 지도(미리보기 지도 탭 시 열림) -->
+  <div id="mapModal" style="position:absolute;inset:0;z-index:9000;background:#0c0c0d;display:none;flex-direction:column">
+    <div id="bigMap" style="position:absolute;inset:0"></div>
+    <div id="bigMapTitle" style="position:absolute;top:16px;left:16px;z-index:9200;background:rgba(255,255,255,.95);border-radius:14px;padding:8px 14px;font-weight:700;font-size:13px;box-shadow:0 4px 14px -4px rgba(0,0,0,.4)">추천 경로</div>
+    <button onclick="closeBigMap()" style="position:absolute;top:14px;right:14px;z-index:9200;width:40px;height:40px;border:none;border-radius:50%;background:#fff;box-shadow:0 4px 14px -4px rgba(0,0,0,.5);font-size:19px;cursor:pointer;color:#333">✕</button>
+    <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:9200;background:rgba(255,255,255,.92);border-radius:20px;padding:7px 16px;font-size:12px;font-weight:600;color:#555;box-shadow:0 4px 12px -4px rgba(0,0,0,.35);white-space:nowrap">끌어서 이동 · 두 손가락/휠로 확대·축소</div>
+  </div>
   <!-- ===== HOME ===== -->
   <div class="scr on" id="s-home">
     <div class="stbar"><span>9:41</span><span class="notch">📶 100% 🔋</span></div>
@@ -593,6 +601,36 @@ function drawWalkMap(elId,w){
   naverMarker(M,last[1],last[0],'<div class="mk-pin end">착</div>',14,14,500);
   M.map.fitBounds(b);
 }
+// ---- 전체화면 인터랙티브 지도(미리보기 탭 시) ----
+let _bigSegs=null;
+function currentSegs(){
+  const scr=(document.querySelector('.scr.on')||{}).id;
+  if(scr==='s-recwalk'){const w=WALKS[_recSel];return w?w.segs:null;}
+  const r=(DATA.routes||[])[(scr==='s-route'||scr==='s-walk')?sel:0];
+  return r?r.segs:null;
+}
+function openBigMap(){
+  const segs=currentSegs(); if(!segs||!segs.length)return;
+  _bigSegs=segs; $('mapModal').style.display='flex';
+  const scr=(document.querySelector('.scr.on')||{}).id;
+  $('bigMapTitle').textContent=(scr==='s-recwalk')?'걸었던 경로':'추천 경로';
+  drawBigMap();
+}
+function closeBigMap(){$('mapModal').style.display='none';}
+function drawBigMap(){
+  const M=getMap('bigMap',true); if(!M)return;
+  naver.maps.Event.trigger(M.map,'resize'); clearOverlays(M); M.legend.style.display='none';
+  const segs=_bigSegs||[]; if(!segs.length||!segs[0].line||!segs[0].line.length)return;
+  const toLL=c=>new naver.maps.LatLng(c[1],c[0]);
+  const b=new naver.maps.LatLngBounds(toLL(segs[0].line[0]),toLL(segs[0].line[0]));
+  for(const sg of segs){const path=sg.line.map(toLL);path.forEach(ll=>b.extend(ll));
+    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:'#fff',strokeWeight:11,strokeOpacity:.95,strokeLineCap:'round',strokeLineJoin:'round'}));
+    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:shadeColor(effVal(sg)),strokeWeight:6,strokeOpacity:1,strokeLineCap:'round',strokeLineJoin:'round'}));}
+  const first=segs[0].line[0],last=segs[segs.length-1].line.slice(-1)[0];
+  naverMarker(M,first[1],first[0],'<div class="mk-pin start">출</div>',14,14,500);
+  naverMarker(M,last[1],last[0],'<div class="mk-pin end">착</div>',14,14,500);
+  M.map.fitBounds(b);
+}
 const DOGS=[
   {id:'maltese',name:'말티즈',img:'assets/dog-maltese.png',trait:'하얗고 사랑스러운 단짝. 더위에 조금 약해요.',tag:'☀️ 더위 주의'},
   {id:'pom',name:'포메라니안',img:'assets/dog-pom.png',trait:'폭신폭신 솜뭉치. 두꺼운 털로 여름엔 각별히 조심.',tag:'🌡️ 열 조심'},
@@ -686,10 +724,17 @@ function getMap(elId,interactive){
   const map=new naver.maps.Map(el,{
     zoomControl:!!interactive,zoomControlOptions:{position:naver.maps.Position.TOP_RIGHT},
     logoControl:false,mapDataControl:false,scaleControl:false,
-    draggable:!!interactive,pinchZoom:!!interactive,scrollWheel:false,
-    disableDoubleClickZoom:!interactive,disableKineticPan:true,
+    draggable:!!interactive,pinchZoom:!!interactive,scrollWheel:!!interactive,
+    disableDoubleClickZoom:!interactive,disableKineticPan:!interactive,
     center:new naver.maps.LatLng((DATA.gps&&DATA.gps.lat)||37.5,(DATA.gps&&DATA.gps.lon)||127.1),zoom:15});
   const legend=document.createElement('div');legend.className='legend';el.appendChild(legend);
+  if(elId!=='bigMap'){                         // 미리보기 지도 → 탭하면 전체화면 인터랙티브 지도로
+    el.style.cursor='zoom-in';
+    el.addEventListener('click',function(){openBigMap();});
+    const exp=document.createElement('button');exp.type='button';exp.className='mapexp';exp.innerHTML='⤢';
+    exp.title='크게 보기';exp.onclick=function(ev){ev.stopPropagation();openBigMap();};
+    el.appendChild(exp);
+  }
   MAPS[elId]={map,overlays:[],legend};return MAPS[elId];
 }
 function clearOverlays(M){for(const o of M.overlays)o.setMap(null);M.overlays.length=0;}
