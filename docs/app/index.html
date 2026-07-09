@@ -72,6 +72,7 @@ body{margin:0;font-family:'Pretendard','Jua',system-ui,sans-serif;color:var(--in
 .hcell .hs{font-size:11.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 .hcell .hb{width:14px;border-radius:8px;min-height:6px;transition:.3s}
 .hcell .hh{font-size:11px;font-weight:500;color:var(--muted)}
+.hcell .hpop{font-size:9.5px;font-weight:700;color:#4E86AE;font-variant-numeric:tabular-nums;line-height:1}
 .hcell.now .hh{color:var(--coral-d);font-weight:700}
 .hlegend{display:flex;gap:14px;justify-content:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;font-weight:500;color:var(--ink)}
 .hlegend span{display:flex;align-items:center;gap:5px}
@@ -823,12 +824,15 @@ function personalize(m){
 function renderHome(){
   const m=DATA.meta;const adv=advisoryView();const pz=personalize(m);
   const raining=rainDemo||!!m.rain;                    // 실제 강수도 데모처럼 히어로에 반영
-  const lv=raining?'red':pz.lv;const score=raining?'—':pz.score;
+  const lv=raining?'red':pz.lv;const RAIN='#4E86AE';        // 강수 파랑(시간별 비색과 통일)
+  const score=raining?'☔':pz.score;                        // 비 오면 위험지수 대신 강수 표시
   const pct=raining?100:Math.min(pz.score,100);
-  $('ring').style.background=`conic-gradient(${DOT[lv]} 0% ${pct}%,#fff 0)`;
-  $('ring').style.padding='0';$('ring').style.boxShadow=`0 8px 16px -6px ${DOT[lv]}66`;
+  const ringCol=raining?RAIN:DOT[lv];
+  $('ring').style.background=`conic-gradient(${ringCol} 0% ${pct}%,#fff 0)`;
+  $('ring').style.padding='0';$('ring').style.boxShadow=`0 8px 16px -6px ${ringCol}66`;
   $('heroScore').textContent=score;
-  $('heroLabel').textContent=LVLABEL[lv];$('heroLabel').style.color=DOT[lv];
+  $('heroScore').style.fontSize=raining?'30px':'';          // ☔ 아이콘 크게
+  $('heroLabel').textContent=raining?'비 와요':LVLABEL[lv];$('heroLabel').style.color=ringCol;
   $('hero').className='hero lv-'+lv;
   for(const s of $('tl').children){const on=s.dataset.l===lv;s.style.background=DOT[s.dataset.l];
     s.style.opacity=on?1:.26;s.style.animation=on?'sigPulse 1.7s ease-in-out infinite':'none';
@@ -844,7 +848,9 @@ function renderHome(){
     .map(([k,v])=>`<div class="chip"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
   // 시간별
   $('hrow').innerHTML=DATA.hourly.map((h,i)=>{const col=h.rain?'#8FB8D0':SIG[h.level];
-    return `<div class="hcell ${i===0?'now':''}"><div class="hs">${h.rain?'☔':h.score}</div><div class="hb" style="height:${16+h.score*.5}px;background:${col}"></div><div class="hh">${+h.hour}시</div></div>`;}).join('');
+    const pop=Math.round(h.pop||0);
+    const pophtml=`<div class="hpop"${(h.rain||pop>=50)?'':' style="opacity:.32"'}>💧${pop}%</div>`;
+    return `<div class="hcell ${i===0?'now':''}"><div class="hs">${h.rain?'☔':h.score}</div><div class="hb" style="height:${16+h.score*.5}px;background:${col}"></div>${pophtml}<div class="hh">${+h.hour}시</div></div>`;}).join('');
   // 게이트
   const G={go:['1f43e','산책하기 좋아요'],caution:['26a0','주의가 필요해요'],stop:['1f6ab','지금은 산책 금지']};
   const gv=G[adv.status]||G.go;
