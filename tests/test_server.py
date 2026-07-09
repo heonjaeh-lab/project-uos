@@ -52,3 +52,26 @@ def test_route_engine_error_502(monkeypatch):
 
 def test_route_bad_param_422():
     assert client.get("/api/route?lat=999&lon=127").status_code == 422
+
+
+def test_route_out_of_korea_422(monkeypatch):
+    # 좌표 범위(Query)는 통과하나 서비스 지오펜스(한국) 밖 → 엔진 호출 없이 422.
+    monkeypatch.setattr(srv, "gps_map_payload", lambda *a, **k: _FAKE)
+    assert client.get("/api/route?lat=10.0&lon=100.0").status_code == 422
+
+
+def test_route_dest_too_far_422(monkeypatch):
+    # origin·dest 모두 한국 내지만 ~44km(도보 상한 8km 초과) → 422.
+    monkeypatch.setattr(srv, "gps_map_payload", lambda *a, **k: _FAKE)
+    r = client.get("/api/route?lat=37.5&lon=127.0&dest_lat=37.5&dest_lon=127.5")
+    assert r.status_code == 422
+
+
+def test_route_busy_503(monkeypatch):
+    # 동시성 세마포어 소진 시 빠른 실패(503).
+    import threading
+    sem = threading.BoundedSemaphore(1)
+    sem.acquire()  # 유일 슬롯 선점 → 이후 요청은 획득 실패
+    monkeypatch.setattr(srv, "_route_sem", sem)
+    monkeypatch.setattr(srv, "gps_map_payload", lambda *a, **k: _FAKE)
+    assert client.get("/api/route?lat=37.5&lon=127.0").status_code == 503

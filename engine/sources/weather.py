@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from zoneinfo import ZoneInfo
@@ -32,8 +33,12 @@ _BASE_TIMES = ["2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"]
 
 # 기상·대기 TTL 캐시 — 같은 격자·같은 시각의 중복/재방문 호출을 없앤다(값 갱신이 시간 단위라
 # 15분 캐시로 충분). build_env_at·hourly_risk_series가 예보·대기질을 각각 호출하던 중복 제거의 핵심.
+# 예보 키는 (…, '%Y%m%d%H')로 매 시각 새 키가 생겨 무한 누적될 수 있으므로 상한(_WX_MAX)을 둬
+# 초과 시 만료·최오래 항목부터 축출한다(장기 구동 메모리 유계). 축출/쓰기는 락으로 보호(병렬 build_env_at).
 _WX_CACHE: dict = {}
 _WX_TTL_S = 900
+_WX_MAX = 512
+_WX_LOCK = threading.Lock()
 
 
 def _wx_cached(key, producer, ttl: float = _WX_TTL_S):
@@ -42,9 +47,15 @@ def _wx_cached(key, producer, ttl: float = _WX_TTL_S):
     now = time.monotonic()
     if hit is not None and now - hit[0] < ttl:
         return hit[1]
-    val = producer()
+    val = producer()  # 네트워크 I/O는 락 밖에서
     if val is not None and val != []:
-        _WX_CACHE[key] = (now, val)
+        with _WX_LOCK:
+            if len(_WX_CACHE) >= _WX_MAX:
+                for k in [k for k, v in _WX_CACHE.items() if now - v[0] >= ttl]:
+                    _WX_CACHE.pop(k, None)               # 1차: 만료 항목 제거
+                while len(_WX_CACHE) >= _WX_MAX:
+                    _WX_CACHE.pop(min(_WX_CACHE, key=lambda k: _WX_CACHE[k][0]), None)  # 2차: 최오래
+            _WX_CACHE[key] = (now, val)
     return val
 
 
