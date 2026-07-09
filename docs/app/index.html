@@ -556,6 +556,27 @@ const WKEY='pawtrail.walks';
 let WALKS=[], _recSel=0;
 function loadWalks(){try{const j=localStorage.getItem(WKEY);WALKS=j?(JSON.parse(j)||[]):[];}catch(e){WALKS=[];}}
 function saveWalks(){try{localStorage.setItem(WKEY,JSON.stringify(WALKS));}catch(e){}}
+// 발표용 예시 기록 시드 — 기록이 비어있을 때만(force=true면 강제 재생성). 실제 데모 경로
+// 좌표(송파)를 써서 상세/전체화면 지도에 진짜 경로가 그려지고, 최근 6일에 분산해 주간 그래프도 채운다.
+function seedDemoWalks(force){
+  if(!force && WALKS.length) return;
+  const base=(DATA.routes&&DATA.routes.length)?DATA.routes:[];
+  if(!base.length) return;
+  const now=Date.now(), H=3600000, D=86400000;
+  const S=[
+    {back:2*H,     ri:0, label:'그늘 최대', dist:1820, time:24, sh:0.78, coins:4},
+    {back:1*D+9*H, ri:1, label:'균형',      dist:1460, time:19, sh:0.66, coins:3},
+    {back:2*D+5*H, ri:2, label:'동네 순환', dist:2240, time:29, sh:0.71, coins:5},
+    {back:4*D+7*H, ri:0, label:'그늘 최대', dist:1330, time:17, sh:0.74, coins:3},
+    {back:6*D+3*H, ri:1, label:'최단 거리', dist:1080, time:14, sh:0.58, coins:2},
+  ];
+  WALKS=S.map(s=>{const r=base[s.ri%base.length];
+    return {ts:now-s.back, routeLabel:s.label, distance_m:s.dist, time_min:s.time,
+      shade:s.sh, shade_eff:s.sh, sky_code:null, coins:s.coins,
+      dogName:(PROFILE&&PROFILE.name)||'', demo:false,
+      segs:(r.segs||[]).map(x=>({line:x.line, shade:x.shade, shade_eff:(x.shade_eff!=null?x.shade_eff:x.shade)}))};});
+  saveWalks();
+}
 // 완주 시 사용자가 고른 추천 경로를 스냅샷 저장(최신순, 최대 50건). segs로 나중에 지도 재그림.
 function recordWalk(){
   const r=DATA.routes&&DATA.routes[sel]; if(!r)return;
@@ -1112,6 +1133,7 @@ function initDogCanvas(){
 loadProfile();
 loadGame();
 loadWalks();
+seedDemoWalks();          // 기록 비어있으면 발표용 예시 5건 시드(있으면 건너뜀)
 resolveEmoji();
 fillForm();
 initDogCanvas();
