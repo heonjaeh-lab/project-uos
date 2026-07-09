@@ -8,6 +8,8 @@ import json
 
 SRC = "data/demo/map_data.json"
 OUT = "docs/app/조심해야댕.html"
+import os
+API_BASE = os.environ.get("API_BASE", "")   # 빌드시 주입: 로컬 http://localhost:8000 / prod Azure FQDN
 with open(SRC, encoding="utf-8") as f:
     DATA = json.load(f)
 
@@ -181,7 +183,10 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
       <span style="margin-left:auto;font-weight:800;font-size:12.5px;color:#C24E24;background:#FBE7DB;padding:6px 12px;border-radius:999px">만두 · 말티즈</span>
     </div>
     <div class="body" style="padding:0 20px 20px">
-      <div style="font-weight:700;font-size:12px;color:#9A928B;margin-bottom:8px">📍 내 위치(GPS)에서 · 추천 3개 중 골라</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-weight:700;font-size:12px;color:#9A928B;flex:1">📍 내 위치(GPS)에서 · 추천 3개 중 골라</span>
+        <button onclick="findRoute()" style="border:1.5px solid #F1592A;background:#FDEDE4;color:#C24E24;font-family:'Gothic A1';font-weight:800;font-size:11.5px;border-radius:999px;padding:5px 11px;cursor:pointer">📍 다시</button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:12px" id="rchips"></div>
       <div class="mapwrap" style="height:200px" id="routeMap"></div>
       <div class="card" style="margin-top:14px;border-radius:22px;padding:16px 18px">
@@ -314,10 +319,18 @@ body{margin:0;background:#F1EBE0;font-family:'Gothic A1',sans-serif;display:flex
     <div class="tab" data-t="record" onclick="go('record')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg><span class="tlbl">기록</span></div>
     <div class="tab" data-t="my" onclick="go('my')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg><span class="tlbl">마이</span></div>
   </div>
+
+  <!-- GPS 로딩 / 토스트 -->
+  <div class="maploading" id="gpsLoading" style="border-radius:44px">
+    <div class="spin"></div>
+    <div id="gpsLoadingMsg">내 위치에서 안전한 길을 찾는 중…<br><span style="font-size:11px;color:#B9AE9F">동네 지도를 처음 받는 중이면 조금 걸려요</span></div>
+  </div>
+  <div id="toast" style="position:absolute;left:16px;right:16px;top:54px;z-index:1300;display:none;background:#2E2A27;color:#fff;font-weight:700;font-size:12.5px;padding:11px 14px;border-radius:14px;box-shadow:0 8px 20px rgba(46,42,39,.3);text-align:center;animation:toastin .3s ease"></div>
 </div>
 
 <script>
 const DATA=__DATA__;
+const API_BASE="__API_BASE__";   // "" → 데모만. 값 있으면 GPS→서버 호출.
 let sel=0, rainDemo=false;
 const SIG={green:'#35B36B',yellow:'#F3B23A',red:'#EE5140'};
 const LVLABEL={green:'좋음',yellow:'주의',red:'위험'};
@@ -423,7 +436,7 @@ function renderHome(){
   // 비 오면 CTA 막기
   const cta=$('homeCta');
   if(adv.status==='stop'){cta.classList.add('disabled');cta.textContent='오늘은 산책을 쉬어요';cta.onclick=null;}
-  else{cta.classList.remove('disabled');cta.textContent='안전한 길 찾기';cta.onclick=()=>go('route');}
+  else{cta.classList.remove('disabled');cta.textContent='안전한 길 찾기';cta.onclick=()=>findRoute();}
 }
 
 // ---- 경로 ----
@@ -499,12 +512,40 @@ function saveProfile(){const one=box=>box.querySelector('.pchip.on')?.dataset.v;
     conditions:[...$('fCond').querySelectorAll('.pchip.on')].map(x=>x.dataset.v)};
   go('my');}
 
+// ---- GPS 라이브 라우팅 (Azure API) ----
+function showGpsLoading(on,msg){const el=$('gpsLoading');
+  if(msg)$('gpsLoadingMsg').innerHTML=msg;el.classList.toggle('on',on);}
+let toastT=null;
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';
+  clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',3200);}
+function findRoute(){
+  if(!API_BASE||!navigator.geolocation){go('route');return;}       // 폴백: 데모 경로
+  showGpsLoading(true);
+  navigator.geolocation.getCurrentPosition(
+    p=>fetchRoute(p.coords.latitude,p.coords.longitude),
+    ()=>{showGpsLoading(false);toast('위치를 못 받아 데모 경로를 보여줘요');go('route');},
+    {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+async function fetchRoute(lat,lon){
+  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),45000);  // 콜드 대비
+  try{
+    const res=await fetch(`${API_BASE}/api/route?lat=${lat}&lon=${lon}`,{signal:ctrl.signal});
+    if(!res.ok)throw new Error('http '+res.status);
+    const data=await res.json();
+    if(!data.routes||!data.routes.length)throw new Error('no routes');
+    for(const k of Object.keys(DATA))delete DATA[k];Object.assign(DATA,data);        // DATA 교체(const 유지)
+    sel=0;showGpsLoading(false);go('route');
+  }catch(e){showGpsLoading(false);
+    toast('경로 서버 응답이 없어 데모 경로를 보여줘요');go('route');
+  }finally{clearTimeout(timer);}
+}
+
 go('home');
 </script>
 </body></html>
 """
 
-out = HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False))
+out = HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)).replace("__API_BASE__", API_BASE)
 for path in (OUT, "docs/app/index.html"):   # index.html = 서빙/Pages 진입점
     with open(path, "w", encoding="utf-8") as f:
         f.write(out)
