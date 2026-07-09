@@ -73,6 +73,7 @@ body{margin:0;font-family:'Pretendard','Jua',system-ui,sans-serif;color:var(--in
 .hcell .hb{width:14px;border-radius:8px;min-height:6px;transition:.3s}
 .hcell .hh{font-size:11px;font-weight:500;color:var(--muted)}
 .hcell .hpop{font-size:9.5px;font-weight:700;color:#4E86AE;font-variant-numeric:tabular-nums;line-height:1}
+.dwx{flex:1;border:none;border-radius:12px;padding:9px 3px;font-size:11px;font-weight:700;background:#fff;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px -3px rgba(60,50,30,.3);transition:.15s;white-space:nowrap}
 .hcell.now .hh{color:var(--coral-d);font-weight:700}
 .hlegend{display:flex;gap:14px;justify-content:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;font-weight:500;color:var(--ink)}
 .hlegend span{display:flex;align-items:center;gap:5px}
@@ -117,7 +118,7 @@ body{margin:0;font-family:'Pretendard','Jua',system-ui,sans-serif;color:var(--in
 .mk-poi{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--c);box-shadow:0 1px 4px rgba(60,40,20,.3);box-sizing:border-box}
 .mk-dog{width:42px;height:42px;border-radius:50%;overflow:hidden;background:var(--coral);border:3px solid #fff;box-shadow:0 3px 12px rgba(236,150,140,.7)}
 .mk-dog img{width:100%;height:100%;object-fit:cover}
-.mk-coin{width:26px;height:26px}
+.mk-coin{width:34px;height:21px}
 .mk-coin img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(150,110,10,.55))}
 /* GPS 로딩 오버레이 */
 .maploading{position:absolute;inset:0;z-index:1200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
@@ -182,7 +183,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
           <div class="brand">조심해야댕 <img class="emo" data-emo="1f43e" alt=""></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="coinchip" onclick="go('shop')" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;box-shadow:0 3px 10px -5px rgba(0,0,0,.2)"><img src="assets/coin.png" style="width:17px;height:17px"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
+          <div class="coinchip" onclick="go('shop')" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;box-shadow:0 3px 10px -5px rgba(0,0,0,.2)"><img src="assets/gaekkeom.svg" style="width:26px;height:16px;object-fit:contain"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
           <div class="avatar" onclick="go('my')" style="cursor:pointer"><img id="homeAvatar" src="assets/mandu.png" alt=""></div>
         </div>
       </div>
@@ -217,11 +218,14 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       </div>
 
       <div style="margin-top:14px" id="gate"></div>
-      <div id="rainPreview" onclick="toggleRain()" style="margin-top:12px;background:#EAF1F6;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer">
-        <img class="emo" data-emo="2614" alt="" style="width:26px;height:26px">
-        <div style="flex:1"><div style="font-size:14.5px;font-weight:600" id="rainTitle">비 오는 날이면?</div>
-          <div style="font-size:12px;font-weight:500;color:var(--sub);margin-top:1px" id="rainSub">미끄럼·발 시림 대비 코스 미리보기</div></div>
-        <div style="font-size:20px;color:var(--sub)">›</div>
+      <div style="margin-top:12px;background:#F4F1EA;border-radius:20px;padding:12px 13px">
+        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.2px">🎬 발표 데모 · 날씨 상태 바꿔보기</div>
+        <div id="demoWxBtns" style="display:flex;gap:6px">
+          <button class="dwx" data-m="live" onclick="setDemoWx('live')">실시간</button>
+          <button class="dwx" data-m="good" onclick="setDemoWx('good')">☀️ 좋아요</button>
+          <button class="dwx" data-m="heat" onclick="setDemoWx('heat')">🔥 위험</button>
+          <button class="dwx" data-m="rain" onclick="setDemoWx('rain')">🌧️ 강수</button>
+        </div>
       </div>
 
       <div class="secttl" style="margin-top:22px">오늘의 추천 산책길</div>
@@ -431,7 +435,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       <div style="display:flex;align-items:center;gap:10px;margin:4px 0 6px">
         <button class="icobtn" onclick="go('home')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg></button>
         <div style="flex:1"><div class="secttl">댕꾸 · 우리 아이</div><div style="font-size:12.5px;font-weight:500;color:var(--sub)">아이를 고르고 옷을 입혀요</div></div>
-        <div class="coinchip" onclick="go('shop')" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer"><img src="assets/coin.png" style="width:17px;height:17px"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
+        <div class="coinchip" onclick="go('shop')" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer"><img src="assets/gaekkeom.svg" style="width:26px;height:16px;object-fit:contain"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
       </div>
       <div style="text-align:center;margin-top:6px"><img id="dressPreview" alt="" style="width:196px;height:196px;object-fit:contain;filter:drop-shadow(0 10px 12px rgba(190,120,105,.32))"></div>
       <div id="dressStatus" style="text-align:center;font-weight:700;font-size:14.5px;color:var(--ink);margin-top:2px"></div>
@@ -449,8 +453,8 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <div class="body" style="padding:2px 20px 26px">
       <div style="display:flex;align-items:center;gap:10px;margin:4px 0 6px">
         <button class="icobtn" onclick="go('dress')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg></button>
-        <div style="flex:1"><div class="secttl">상점</div><div style="font-size:12.5px;font-weight:500;color:var(--sub)">코인으로 옷을 구매해요</div></div>
-        <div class="coinchip" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px"><img src="assets/coin.png" style="width:17px;height:17px"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
+        <div style="flex:1"><div class="secttl">상점</div><div style="font-size:12.5px;font-weight:500;color:var(--sub)">개껌으로 옷을 구매해요</div></div>
+        <div class="coinchip" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px"><img src="assets/gaekkeom.svg" style="width:26px;height:16px;object-fit:contain"><span class="coinval" style="font-weight:800;font-size:14px;color:var(--ink)">0</span></div>
       </div>
       <div id="buyMsg" style="display:none;border-radius:14px;padding:11px 14px;font-size:12.5px;font-weight:700;color:var(--ink);margin-top:6px"></div>
       <div id="shopList"></div>
@@ -546,7 +550,7 @@ let PROFILE={name:'만두',breed:'말티즈',age:4,weight:3.2,coat:'medium',size
 function loadProfile(){try{const j=localStorage.getItem(PKEY);if(j)PROFILE=Object.assign(PROFILE,JSON.parse(j));}catch(e){}}
 function persistProfile(){try{localStorage.setItem(PKEY,JSON.stringify(PROFILE));}catch(e){}}
 
-// ================= 게임화(코인·댕꾸·상점) =================
+// ================= 게임화(개껌·댕꾸·상점) =================
 const GKEY='pawtrail_game';
 let GAME={coins:1000,owned:{},breed:'maltese',outfit:null};
 function loadGame(){try{const j=localStorage.getItem(GKEY);if(j)GAME=Object.assign(GAME,JSON.parse(j));}catch(e){}}
@@ -604,7 +608,7 @@ function renderRecWalk(){
   $('recwTitle').textContent=(w.routeLabel||'산책')+' 코스'+(w.demo?' · 데모':'');
   $('recwDate').textContent=fmtWalkDate(w.ts);
   const sh=Math.round(((w.shade_eff!=null?w.shade_eff:w.shade)||0)*100);
-  $('recwStats').innerHTML=[['거리',(w.distance_m/1000).toFixed(1)+'km'],['시간',Math.round(w.time_min)+'분'],['그늘',sh+'%'],['코인','+'+(w.coins||0)]]
+  $('recwStats').innerHTML=[['거리',(w.distance_m/1000).toFixed(1)+'km'],['시간',Math.round(w.time_min)+'분'],['그늘',sh+'%'],['개껌','+'+(w.coins||0)]]
     .map(([k,v])=>`<div style="flex:1;background:#fff;border-radius:18px;padding:14px 6px;text-align:center;box-shadow:0 6px 16px -10px rgba(60,50,30,.25)"><div class="num" style="font-size:20px;color:${k==='그늘'?'#26A99B':'var(--ink)'}">${v}</div><div style="font-weight:500;font-size:11px;color:var(--muted);margin-top:2px">${k}</div></div>`).join('');
   drawWalkMap('recMap',w);
 }
@@ -697,12 +701,12 @@ function flashBuy(msg,kind){const el=$('buyMsg');if(!el)return;el.textContent=ms
   clearTimeout(_buyTimer);_buyTimer=setTimeout(()=>{el.style.display='none';},3000);}
 function buyItem(id){const it=SHOP.find(s=>s.id===id);if(!it)return;
   if(GAME.owned[id]){flashBuy(it.name+'은(는) 이미 있어요','have');return;}
-  if(GAME.coins<it.price){flashBuy('코인이 '+(it.price-GAME.coins)+'개 모자라요','no');return;}
+  if(GAME.coins<it.price){flashBuy('개껌이 '+(it.price-GAME.coins)+'개 모자라요','no');return;}
   GAME.coins-=it.price;GAME.owned[id]=1;saveGame();renderCoins();renderShop();
   flashBuy('🎉 '+it.name+' 구매 완료! 댕꾸에서 입혀보세요','ok');}
 function renderShop(){
   if($('shopList'))$('shopList').innerHTML=SHOP.map(s=>{const owned=GAME.owned[s.id];
-    return `<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px;margin-top:10px;box-shadow:0 6px 14px -10px rgba(60,50,30,.3)"><img src="${s.img}" style="width:56px;height:56px;object-fit:contain;border-radius:12px;background:#FCEDE8"><div style="flex:1"><div style="font-family:'Jua',cursive;font-size:16px;color:var(--ink)">${s.name}</div><div style="font-size:11.5px;color:var(--sub)">${s.rank}</div></div><button onclick="buyItem('${s.id}')" ${owned?'disabled':''} style="border:none;border-radius:14px;padding:11px 15px;font-weight:800;background:${owned?'#E5DFD2':'var(--coral)'};color:var(--ink);cursor:${owned?'default':'pointer'}">${owned?'보유중':'🪙 '+s.price}</button></div>`;}).join('');
+    return `<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px;margin-top:10px;box-shadow:0 6px 14px -10px rgba(60,50,30,.3)"><img src="${s.img}" style="width:56px;height:56px;object-fit:contain;border-radius:12px;background:#FCEDE8"><div style="flex:1"><div style="font-family:'Jua',cursive;font-size:16px;color:var(--ink)">${s.name}</div><div style="font-size:11.5px;color:var(--sub)">${s.rank}</div></div><button onclick="buyItem('${s.id}')" ${owned?'disabled':''} style="border:none;border-radius:14px;padding:11px 15px;font-weight:800;background:${owned?'#E5DFD2':'var(--coral)'};color:var(--ink);cursor:${owned?'default':'pointer'}">${owned?'보유중':'<img src="assets/gaekkeom.svg" style="width:19px;height:12px;object-fit:contain;vertical-align:-1px"> '+s.price}</button></div>`;}).join('');
   renderCoins();resolveEmoji($('s-shop'));
 }
 const COND_KO={patella:'슬개골 탈구',joint:'관절',heart:'심장',obesity:'비만',respiratory:'호흡기',none:'없음'};
@@ -864,6 +868,7 @@ function renderHome(){
   const cta=$('homeCta');
   if(adv.status==='stop'){cta.classList.add('disabled');cta.innerHTML='오늘은 산책을 쉬어요';cta.onclick=null;}
   else{cta.classList.remove('disabled');cta.innerHTML='<img class="emo" data-emo="1f43e" alt=""> 안전한 길 찾기';cta.onclick=()=>findRoute();}
+  renderDemoWxUI();
   resolveEmoji($('s-home'));
 }
 
@@ -893,8 +898,8 @@ function renderRoute(){
   resolveEmoji($('s-route'));
 }
 function selectRoute(i){sel=i;renderRoute();}
-// ---- 산책중 코인 줍기 ----
-const COIN_TS=[0.125,0.375,0.625,0.875], WALK_DUR=22;   // 경로 분위치별 코인 · 산책 총 22초
+// ---- 산책중 개껌 줍기 ----
+const COIN_TS=[0.125,0.375,0.625,0.875], WALK_DUR=22;   // 경로 분위치별 개껌 · 산책 총 22초
 let _walkTimer=0,_walkProg=0,_walkGot={},_walkDog=null,_walkCoins=[];
 function _routePts(rt){const a=[];for(const sg of rt.segs)for(const c of sg.line)a.push(c);return a;}
 function pointAtFrac(rt,f){const pts=_routePts(rt),cl=[0];
@@ -913,7 +918,7 @@ function startWalk(){
   walkCleanup();_walkProg=0;_walkGot={};
   _walkCoins=COIN_TS.map(f=>{const c=pointAtFrac(rt,f);
     return new naver.maps.Marker({position:new naver.maps.LatLng(c[1],c[0]),map:M.map,
-      icon:{content:'<div class="mk-coin"><img src="assets/coin.png"></div>',anchor:new naver.maps.Point(13,13)},zIndex:800,clickable:false});});
+      icon:{content:'<div class="mk-coin"><img src="assets/gaekkeom.svg"></div>',anchor:new naver.maps.Point(17,10)},zIndex:800,clickable:false});});
   const s0=pointAtFrac(rt,0);
   _walkDog=new naver.maps.Marker({position:new naver.maps.LatLng(s0[1],s0[0]),map:M.map,
     icon:{content:`<div class="mk-dog"><img src="${dressedImg()}"></div>`,anchor:new naver.maps.Point(21,21)},zIndex:1200,clickable:false});
@@ -950,10 +955,34 @@ function renderDone(){const r=DATA.routes[sel];
     .map(([k,v])=>`<div style="flex:1;background:#fff;border-radius:18px;padding:15px 8px;text-align:center;box-shadow:0 6px 16px -10px rgba(60,50,30,.25)"><div class="num" style="font-size:22px;color:${k==='그늘'?'#26A99B':'var(--ink)'}">${v}</div><div style="font-weight:500;font-size:11px;color:var(--muted);margin-top:2px">${k}</div></div>`).join('');
   resolveEmoji($('s-done'));
 }
-function toggleRain(){rainDemo=!rainDemo;
-  $('rainTitle').textContent=rainDemo?'맑은 날로 되돌리기':'비 오는 날이면?';
-  $('rainSub').textContent=rainDemo?'지금은 비 예보 미리보기 상태예요':'미끄럼·발 시림 대비 코스 미리보기';
-  renderHome();}
+// ===== 발표 데모: 날씨 상태 전환기(좋아요/위험(더위)/강수) =====
+let demoWx=null;   // null|'live'면 실시간, 'good'|'heat'|'rain'이면 시나리오 고정
+function _demoHourly(mode){
+  const base=(DATA.hourly&&DATA.hourly.length)?DATA.hourly:Array.from({length:12},(_,i)=>({hour:String((15+i)%24)}));
+  return base.map((h,i)=>{
+    if(mode==='rain'){const rain=i<6;return {hour:h.hour,score:26+((i*4)%10),level:'green',dominant:'heat',temp:25,pty:rain?1:0,pop:rain?70:40,advisory:rain?'stop':'go',rain};}
+    if(mode==='heat'){const sc=[86,84,80,73,65,57,50,45,41,39,37,35][i%12];return {hour:h.hour,score:sc,level:sc>=70?'red':sc>=40?'yellow':'green',dominant:'heat',temp:34-((i/2)|0),pty:0,pop:5,advisory:sc>=70?'caution':'go',rain:false};}
+    const sc=[26,24,23,22,22,24,27,25,24,23,25,28][i%12];return {hour:h.hour,score:sc,level:'green',dominant:'heat',temp:22,pty:0,pop:10,advisory:'go',rain:false};
+  });
+}
+function setDemoWx(mode){
+  if(mode==='live'){demoWx=null;rainDemo=false;wxLast=0;renderDemoWxUI();loadWeather();renderHome();return;}
+  demoWx=mode; rainDemo=(mode==='rain');
+  const P={
+    good:{now_level:'green',now_score:24,now_dominant:'heat',air_temp_c:22,humidity_pct:50,pm10:20,precip_prob_pct:10,rain:false,sky_code:1,clearness:1,advisory:'go',advisory_reason:'오늘은 산책하기 좋은 날이에요 🐾'},
+    heat:{now_level:'red',now_score:82,now_dominant:'heat',air_temp_c:34,humidity_pct:62,pm10:45,precip_prob_pct:5,rain:false,sky_code:1,clearness:1,advisory:'caution',advisory_reason:'한낮 폭염이에요. 아스팔트가 뜨거우니 그늘길·이른 아침을 추천해요.'},
+    rain:{now_level:'green',now_score:28,now_dominant:'heat',air_temp_c:25,humidity_pct:88,pm10:12,precip_prob_pct:75,rain:true,precip_mm:2.5,sky_code:4,clearness:0.1,advisory:'stop',advisory_reason:'지금 비가 와요 (2.5mm). 산책을 미뤄주세요.'},
+  }[mode];
+  Object.assign(DATA.meta,P);
+  DATA.hourly=_demoHourly(mode);
+  renderDemoWxUI(); renderHome();
+}
+function renderDemoWxUI(){
+  const col={live:'#8A7E6B',good:'#3BAE78',heat:'#E1614C',rain:'#4E86AE'};
+  document.querySelectorAll('#demoWxBtns .dwx').forEach(b=>{const on=b.dataset.m===(demoWx||'live');
+    b.style.background=on?(col[b.dataset.m]||'#8A7E6B'):'#fff';b.style.color=on?'#fff':'var(--ink)';
+    b.style.boxShadow=on?`0 4px 10px -3px ${col[b.dataset.m]||'#8A7E6B'}`:'0 2px 6px -3px rgba(60,50,30,.3)';});
+}
 
 // ================= 기록 / 배변 =================
 const HISTORY=[{d:'오늘',n:'그늘 최대 코스',km:1.8,t:24,sh:78,ic:'1f332'},{d:'어제',n:'개울 산책길',km:1.6,t:31,sh:54,ic:'1f4a7'},
@@ -1044,6 +1073,7 @@ function saveProfile(){
 function stamp(){const d=new Date();return `· ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
 function maybeSyncWeather(){
   if(!API_BASE)return;
+  if(demoWx)return;                                        // 데모 상태 고정 중엔 실날씨로 덮어쓰지 않음
   const now=Date.now();
   if(now-wxLast>60*60*1000||wxLast===0)loadWeather();      // 1시간 경과 시 or 최초
 }
@@ -1061,6 +1091,7 @@ async function fetchWeather(lat,lon){
     const res=await fetch(`${API_BASE}/api/weather?lat=${lat}&lon=${lon}`,{signal:ctrl.signal});
     clearTimeout(t);if(!res.ok)throw 0;
     const w=await res.json();
+    if(demoWx)return;                          // 데모 고정 중이면 실날씨 미적용(덮어쓰기 방지)
     if(w.meta)Object.assign(DATA.meta,w.meta);
     if(w.hourly&&w.hourly.length)DATA.hourly=w.hourly;
     wxLast=Date.now();$('wxStamp').textContent=stamp();
