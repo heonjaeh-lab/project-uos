@@ -103,4 +103,65 @@ def route_from_gps(lat: float, lon: float, dest: tuple[float, float] | None = No
     return [{"label": "동네 순환", "route": loop}] if loop and loop.reason is None else []
 
 
-__all__ = ["load_local_walk_graph", "build_local_graph", "route_from_gps"]
+def gps_map_payload(lat: float, lon: float, dest: tuple[float, float] | None = None, *,
+                    dist_m: float = 1800, target_m: float = 2000,
+                    when: datetime | None = None, pois=None, cost_params=None,
+                    hours: int = 12) -> dict:
+    """사용자 GPS(+선택 목적지)에서 프론트 map_data.json과 **동일 스키마** dict 생성.
+
+    export_map_data(송파 데모)와 같은 필드를 서울 전역 임의 좌표로 낸다:
+      routes(다중/순환) · bbox · gps · origin · dest · hourly · meta.
+    프론트가 이 dict로 DATA를 교체하면 그대로 렌더된다. context(배경 도로망)는
+    Leaflet 실 타일이 대체하므로 뺀다(payload·계산 절감).
+    """
+    from engine.risk import walk_advisory
+    from engine.routing import route_payload, routes_bbox
+    from engine.sources.weather import build_env_at, hourly_risk_series
+
+    when = when or datetime.now(SEOUL)
+    # 사용자 위치 실측 환경(그래프 그늘/위험 주입 + meta 공용). dest여도 GPS 기준.
+    env, missing = build_env_at(lat, lon, when)
+
+    if dest is not None:
+        d = _haversine_m(lat, lon, dest[0], dest[1])
+        radius = max(dist_m, d / 2 * 1.25 + 300)
+        clat, clon = (lat + dest[0]) / 2, (lon + dest[1]) / 2
+        G, _ = build_local_graph(clat, clon, dist_m=radius, when=when, env=env,
+                                 cost_params=cost_params)
+        orig, dst = nearest_node(G, lat, lon), nearest_node(G, dest[0], dest[1])
+        opts = recommend_routes(G, orig, dst, pois=pois)
+    else:
+        G, _ = build_local_graph(lat, lon, dist_m=max(dist_m, target_m * 0.7),
+                                 when=when, env=env, cost_params=cost_params)
+        orig = nearest_node(G, lat, lon)
+        loop = neighborhood_loop(G, orig, target_m, cost_params or CostParams(), pois=pois)
+        opts = [{"label": "동네 순환", "route": loop}] if loop and loop.reason is None else []
+        dst = orig
+
+    routes = [route_payload(G, o["route"], o["label"]) for o in opts]
+    bbox = routes_bbox(routes, center=(lat, lon))
+    hourly = hourly_risk_series(when=when, hours=hours, lat=lat, lon=lon)
+    adv = walk_advisory(env, missing=missing)
+    return {
+        "bbox": bbox,
+        "gps": {"lon": lon, "lat": lat},
+        "origin": [round(float(G.nodes[orig]["x"]), 6), round(float(G.nodes[orig]["y"]), 6)],
+        "dest": [round(float(G.nodes[dst]["x"]), 6), round(float(G.nodes[dst]["y"]), 6)],
+        "routes": routes,
+        "hourly": hourly,
+        "meta": {
+            "now_score": hourly[0]["score"] if hourly else None,
+            "now_level": hourly[0]["level"] if hourly else None,
+            "now_dominant": hourly[0]["dominant"] if hourly else None,
+            "advisory": adv.status,
+            "advisory_reason": adv.reason,
+            "rain": adv.rain,
+            "air_temp_c": env.air_temp_c,
+            "humidity_pct": env.humidity_pct,
+            "pm10": env.pm10,
+            "precip_prob_pct": env.precip_prob_pct,
+        },
+    }
+
+
+__all__ = ["load_local_walk_graph", "build_local_graph", "route_from_gps", "gps_map_payload"]

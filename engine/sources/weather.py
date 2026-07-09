@@ -187,27 +187,34 @@ def fetch_forecast_series(nx: int = SONGPA_NX, ny: int = SONGPA_NY,
 
 
 def hourly_risk_series(when: dt.datetime | None = None, hours: int = 12,
-                       params: "RiskParams | None" = None) -> list[dict]:
+                       params: "RiskParams | None" = None,
+                       lat: float | None = None, lon: float | None = None) -> list[dict]:
     """시간별 위험지수 — 예보(시간별 기온·습도) + 현재 PM으로 매 시각 산출.
 
     반환: [{hour:"HH", score, level, dominant}] · 위험지수는 날짜가 아니라 **시간 단위**로
     갱신되어야 하므로 이 함수가 홈 화면의 시간대별 신호등/권장 시간대를 채운다.
+    lat/lon 지정 시 해당 격자 예보를 쓴다(GPS 임의 좌표). 미지정 시 송파 기본.
     """
     from engine.risk import compute_risk, walk_advisory
     from engine.schemas import RiskParams
     params = params or RiskParams()
     when = when or dt.datetime.now(SEOUL)
+    if lat is not None and lon is not None:
+        nx, ny = latlon_to_grid(lat, lon)
+        center = (lat, lon)
+    else:
+        nx, ny, center = SONGPA_NX, SONGPA_NY, SONGPA_CENTER
     air = fetch_air_quality() or {}
     pm10 = air.get("pm10") or 0.0
     pm25 = air.get("pm25") or 0.0
-    series = fetch_forecast_series(when=when, hours=hours)
+    series = fetch_forecast_series(nx=nx, ny=ny, when=when, hours=hours)
     out = []
     for pt in series:
         if pt["air_temp_c"] is None:
             continue
         t = dt.datetime.strptime(pt["stamp"], "%Y%m%d%H%M").replace(tzinfo=SEOUL)
         env = EnvObservation(
-            timestamp=t, lat=SONGPA_CENTER[0], lon=SONGPA_CENTER[1],
+            timestamp=t, lat=center[0], lon=center[1],
             air_temp_c=pt["air_temp_c"], humidity_pct=pt["humidity_pct"] or 50.0,
             wind_ms=pt["wind_ms"] or 1.0, uv_index=0.0, pm10=pm10, pm25=pm25,
             road_surface_temp_c=pt["air_temp_c"], season=_season(t.month),
