@@ -355,6 +355,19 @@ select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     </div>
   </div>
 
+  <!-- ===== RECORD WALK DETAIL ===== -->
+  <div class="scr" id="s-recwalk">
+    <div class="stbar"><span>9:41</span><span class="notch">📶 100% 🔋</span></div>
+    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:2px 20px 6px">
+      <button class="icobtn" onclick="go('record')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg></button>
+      <div><div class="h1" id="recwTitle">산책 경로</div><div style="font-size:12.5px;font-weight:500;color:var(--sub)" id="recwDate"></div></div>
+    </div>
+    <div class="body" style="padding:6px 20px 20px">
+      <div class="mapwrap" style="height:300px" id="recMap"></div>
+      <div style="display:flex;margin-top:16px;gap:9px" id="recwStats"></div>
+    </div>
+  </div>
+
   <!-- ===== POOP LOG ===== -->
   <div class="scr" id="s-poop">
     <div class="stbar"><span>9:41</span><span class="notch">📶 100% 🔋</span></div>
@@ -497,6 +510,7 @@ function go(s){
   if(s==='done')renderDone();if(s==='record')renderRecord();
   if(s==='poop')renderPoop();if(s==='my')renderMy();
   if(s==='dress')renderDress();if(s==='shop')renderShop();
+  if(s==='recwalk')renderRecWalk();
   renderCoins();
 }
 
@@ -528,6 +542,57 @@ const GKEY='pawtrail_game';
 let GAME={coins:1000,owned:{},breed:'maltese',outfit:null};
 function loadGame(){try{const j=localStorage.getItem(GKEY);if(j)GAME=Object.assign(GAME,JSON.parse(j));}catch(e){}}
 function saveGame(){try{localStorage.setItem(GKEY,JSON.stringify(GAME));}catch(e){}}
+
+// ================= 산책 기록(localStorage 영속) — 걸었던 루트 저장·조회 =================
+const WKEY='pawtrail.walks';
+let WALKS=[], _recSel=0;
+function loadWalks(){try{const j=localStorage.getItem(WKEY);WALKS=j?(JSON.parse(j)||[]):[];}catch(e){WALKS=[];}}
+function saveWalks(){try{localStorage.setItem(WKEY,JSON.stringify(WALKS));}catch(e){}}
+// 완주 시 사용자가 고른 추천 경로를 스냅샷 저장(최신순, 최대 50건). segs로 나중에 지도 재그림.
+function recordWalk(){
+  const r=DATA.routes&&DATA.routes[sel]; if(!r)return;
+  const m=DATA.meta||{};
+  WALKS.unshift({
+    ts:Date.now(), routeLabel:r.label||'추천',
+    distance_m:r.distance_m||0, time_min:r.est_time_min||0,
+    shade:r.shade||0, shade_eff:(r.shade_eff!=null?r.shade_eff:r.shade)||0,
+    sky_code:(m.sky_code!=null?m.sky_code:null),
+    coins:Object.keys(_walkGot||{}).length, dogName:(PROFILE&&PROFILE.name)||'', demo:!!isDemo,
+    segs:(r.segs||[]).map(s=>({line:s.line, shade:s.shade, shade_eff:s.shade_eff})),
+  });
+  if(WALKS.length>50)WALKS.length=50;
+  saveWalks();
+}
+function finishWalk(){recordWalk();go('done');}
+function fmtWalkDate(ts){const d=new Date(ts),n=new Date(),sd=(a,b)=>a.toDateString()===b.toDateString();
+  const y=new Date(n);y.setDate(n.getDate()-1);
+  const hm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return (sd(d,n)?'오늘 ':sd(d,y)?'어제 ':(d.getMonth()+1)+'/'+d.getDate()+' ')+hm;}
+function openWalk(i){_recSel=i;go('recwalk');}
+function renderRecWalk(){
+  const w=WALKS[_recSel]; if(!w){go('record');return;}
+  $('recwTitle').textContent=(w.routeLabel||'산책')+' 코스'+(w.demo?' · 데모':'');
+  $('recwDate').textContent=fmtWalkDate(w.ts);
+  const sh=Math.round(((w.shade_eff!=null?w.shade_eff:w.shade)||0)*100);
+  $('recwStats').innerHTML=[['거리',(w.distance_m/1000).toFixed(1)+'km'],['시간',Math.round(w.time_min)+'분'],['그늘',sh+'%'],['코인','+'+(w.coins||0)]]
+    .map(([k,v])=>`<div style="flex:1;background:#fff;border-radius:18px;padding:14px 6px;text-align:center;box-shadow:0 6px 16px -10px rgba(60,50,30,.25)"><div class="num" style="font-size:20px;color:${k==='그늘'?'#26A99B':'var(--ink)'}">${v}</div><div style="font-weight:500;font-size:11px;color:var(--muted);margin-top:2px">${k}</div></div>`).join('');
+  drawWalkMap('recMap',w);
+}
+// 저장된 산책 경로를 그늘색 폴리라인으로 지도에 재그림(기존 지도 인프라 재사용).
+function drawWalkMap(elId,w){
+  const M=getMap(elId,true); if(!M)return;
+  naver.maps.Event.trigger(M.map,'resize'); clearOverlays(M); M.legend.style.display='none';
+  const segs=w.segs||[]; if(!segs.length||!segs[0].line||!segs[0].line.length)return;
+  const toLL=c=>new naver.maps.LatLng(c[1],c[0]);
+  const b=new naver.maps.LatLngBounds(toLL(segs[0].line[0]),toLL(segs[0].line[0]));
+  for(const sg of segs){const path=sg.line.map(toLL);path.forEach(ll=>b.extend(ll));
+    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:'#fff',strokeWeight:9,strokeOpacity:.95,strokeLineCap:'round',strokeLineJoin:'round'}));
+    M.overlays.push(new naver.maps.Polyline({map:M.map,path,strokeColor:shadeColor(effVal(sg)),strokeWeight:5,strokeOpacity:1,strokeLineCap:'round',strokeLineJoin:'round'}));}
+  const first=segs[0].line[0],last=segs[segs.length-1].line.slice(-1)[0];
+  naverMarker(M,first[1],first[0],'<div class="mk-pin start">출</div>',14,14,500);
+  naverMarker(M,last[1],last[0],'<div class="mk-pin end">착</div>',14,14,500);
+  M.map.fitBounds(b);
+}
 const DOGS=[
   {id:'maltese',name:'말티즈',img:'assets/dog-maltese.png',trait:'하얗고 사랑스러운 단짝. 더위에 조금 약해요.',tag:'☀️ 더위 주의'},
   {id:'pom',name:'포메라니안',img:'assets/dog-pom.png',trait:'폭신폭신 솜뭉치. 두꺼운 털로 여름엔 각별히 조심.',tag:'🌡️ 열 조심'},
@@ -790,10 +855,10 @@ function startWalk(){
     if($('walkBar'))$('walkBar').style.width=Math.round(_walkProg*100)+'%';
     const sec=Math.round(rt.est_time_min*60*_walkProg);
     if($('walkTime'))$('walkTime').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
-    if(_walkProg>=1){walkCleanup();addCoins(1);go('done');}
+    if(_walkProg>=1){walkCleanup();addCoins(1);finishWalk();}
   },100);
 }
-function endWalk(){walkCleanup();go('done');}
+function endWalk(){walkCleanup();finishWalk();}
 
 // ================= 산책중 =================
 function walkTips(){return [`지금은 그늘 구간이야. 천천히 걷자 🌳`,`앞쪽 급수대에서 물 한 모금 어때?`,`${PROFILE.name} 발바닥 뜨겁지 않은지 확인해줘`];}
@@ -823,10 +888,26 @@ const HISTORY=[{d:'오늘',n:'그늘 최대 코스',km:1.8,t:24,sh:78,ic:'1f332'
   {d:'2일 전',n:'공원 순환길',km:0.9,t:18,sh:61,ic:'1f415'},{d:'3일 전',n:'최단 코스',km:1.4,t:18,sh:55,ic:'1f43e'}];
 const WEEKLY={walks:5,km:6.4,shade:71,days:[['월',.5],['화',.8],['수',.3],['목',.9],['금',.6],['토',1.0],['일',.7]]};
 const POOP=[['3주 전',4,11],['2주 전',7,15],['1주 전',5,12],['이번 주',6,14]];
-function renderRecord(){$('wkWalks').textContent=WEEKLY.walks;$('wkKm').textContent=WEEKLY.km;$('wkShade').textContent=WEEKLY.shade;
-  const mx=Math.max(...WEEKLY.days.map(d=>d[1]));
-  $('wkChart').innerHTML=WEEKLY.days.map(([d,v])=>`<div class="wkbar"><div class="b" style="height:${8+v/mx*46}px"></div><div class="d">${d}</div></div>`).join('');
-  $('histList').innerHTML=HISTORY.map(h=>`<div class="poi"><span class="pic" style="background:#FCEDE8"><img class="emo" data-emo="${h.ic}" alt="" style="width:20px;height:20px"></span><div style="flex:1"><div style="font-weight:700;font-size:14px">${h.n}</div><div style="font-weight:500;font-size:12px;color:var(--sub)">${h.d} · ${h.km}km · ${h.t}분 · 그늘 ${h.sh}%</div></div></div>`).join('');
+function renderRecord(){
+  const n=WALKS.length;
+  const totKm=WALKS.reduce((a,w)=>a+(w.distance_m||0),0)/1000;
+  const avgSh=n?Math.round(WALKS.reduce((a,w)=>a+((w.shade_eff!=null?w.shade_eff:w.shade)||0),0)/n*100):0;
+  $('wkWalks').textContent=n; $('wkKm').textContent=totKm.toFixed(1); $('wkShade').textContent=avgSh;
+  // 최근 7일 일별 거리(km)
+  const lab=['일','월','화','수','목','금','토'], days=[];
+  for(let i=6;i>=0;i--){const s=new Date();s.setHours(0,0,0,0);s.setDate(s.getDate()-i);
+    const s0=s.getTime(),e0=s0+86400000;
+    const km=WALKS.filter(w=>w.ts>=s0&&w.ts<e0).reduce((a,w)=>a+(w.distance_m||0),0)/1000;
+    days.push([lab[s.getDay()],km]);}
+  const mx=Math.max(0.001,...days.map(d=>d[1]));
+  $('wkChart').innerHTML=days.map(([d,v])=>`<div class="wkbar"><div class="b" style="height:${8+v/mx*46}px"></div><div class="d">${d}</div></div>`).join('');
+  $('histList').innerHTML=n?WALKS.map((w,i)=>{
+    const km=(w.distance_m/1000).toFixed(1),t=Math.round(w.time_min),sh=Math.round(((w.shade_eff!=null?w.shade_eff:w.shade)||0)*100);
+    return `<div onclick="openWalk(${i})" style="display:flex;align-items:center;gap:11px;background:#fff;border-radius:18px;padding:13px 15px;cursor:pointer;box-shadow:0 6px 16px -10px rgba(60,50,30,.25)">
+      <span style="width:38px;height:38px;border-radius:12px;background:#FCEDE8;display:flex;align-items:center;justify-content:center;flex:none"><img class="emo" data-emo="1f43e" alt="" style="width:20px;height:20px"></span>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${w.routeLabel||'산책'} 코스${w.demo?' · 데모':''}</div><div style="font-weight:500;font-size:12px;color:var(--sub)">${fmtWalkDate(w.ts)} · ${km}km · ${t}분 · 그늘 ${sh}%</div></div>
+      <span style="color:var(--muted);font-weight:700;font-size:18px">›</span></div>`;}).join('')
+    :`<div style="text-align:center;color:var(--muted);font-size:13px;font-weight:500;padding:26px 10px;line-height:1.6">아직 산책 기록이 없어요 🐾<br>첫 산책을 떠나볼까요?</div>`;
   resolveEmoji($('s-record'));}
 function renderPoop(){const MX=16;
   $('poopChart').innerHTML=POOP.map(([lb,pp,pe])=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
@@ -985,6 +1066,7 @@ function initDogCanvas(){
 // ================= 부팅 =================
 loadProfile();
 loadGame();
+loadWalks();
 resolveEmoji();
 fillForm();
 initDogCanvas();
