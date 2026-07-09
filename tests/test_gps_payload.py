@@ -35,5 +35,21 @@ def test_gps_map_payload_live_schema():
     for k in ("bbox", "gps", "origin", "dest", "routes", "hourly", "meta"):
         assert k in p, f"missing key {k}"
     assert len(p["bbox"]) == 4
+    assert p["routes"], "no routes produced — schema check would be vacuous"
+    for rt in p["routes"]:
+        assert {"label", "shade", "distance_m", "est_time_min", "max_risk", "segs", "pois"} <= rt.keys()
+
+
+@pytest.mark.skipif(os.environ.get("RUN_LIVE") != "1",
+                    reason="네트워크 라이브 스모크 — RUN_LIVE=1 일 때만")
+def test_gps_map_payload_live_dest_branch():
+    """목적지 지정(dest) 분기 — 실좌표 A→B 경로 생성 + 스키마 검증."""
+    from engine.sources.local_routing import gps_map_payload
+    # 서울시청 → 북동쪽 약 1km 지점
+    p = gps_map_payload(37.5663, 126.9779, dest=(37.5735, 126.9860),
+                        dist_m=1200, hours=6)
+    for k in ("bbox", "gps", "origin", "dest", "routes", "hourly", "meta"):
+        assert k in p, f"missing key {k}"
+    assert p["routes"], "no routes produced for dest branch"
     for rt in p["routes"]:
         assert {"label", "shade", "distance_m", "est_time_min", "max_risk", "segs", "pois"} <= rt.keys()
