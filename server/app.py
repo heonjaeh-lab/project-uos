@@ -10,6 +10,9 @@ GET /api/route?lat&lon[&dest_lat&dest_lon]
 from __future__ import annotations
 
 import os
+import logging
+
+logger = logging.getLogger("pawtrail.server")
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,8 +47,9 @@ def route(
     dest = (dest_lat, dest_lon) if dest_lat is not None and dest_lon is not None else None
     try:
         payload = gps_map_payload(lat, lon, dest=dest)
-    except Exception as e:  # 엔진/외부 API 실패 → 502(프론트가 데모 폴백)
-        raise HTTPException(status_code=502, detail=f"route build failed: {e}")
+    except Exception:  # 엔진/외부 API 실패 → 502(프론트가 데모 폴백)
+        logger.exception("route build failed (lat=%s lon=%s)", lat, lon)  # 실오류는 서버 로그로만
+        raise HTTPException(status_code=502, detail="route build failed")  # 키 유출 방지: 예외 문자열 미노출
     if not payload.get("routes"):
         raise HTTPException(status_code=404, detail="no route found near location")
     return JSONResponse(payload)
