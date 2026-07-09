@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements-server.txt
 
 COPY engine ./engine
 COPY server ./server
+COPY scripts ./scripts   # engine.routing.graph_build 가 scripts.fetch_songpa_graph 를 import(모듈 레벨)
 
 ENV PYTHONUNBUFFERED=1 PORT=8000
 EXPOSE 8000

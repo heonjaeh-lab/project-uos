@@ -710,3 +710,43 @@ Expected: 실사용자 GPS로 서울 어디서든 경로 생성.
 - **플레이스홀더:** 없음(모든 코드·명령 실체 포함). Dockerfile geos/proj는 wheel 우선 + 명시 폴백.
 - **타입 일관성:** `gps_map_payload(lat,lon,dest=...)` 반환 키 집합이 T2 스모크·T3 서버·T5 프론트에서 동일. `route_payload` 필드(`label/shade/distance_m/est_time_min/max_risk/segs/pois`)가 T1 테스트·T3 fake·T5 스텁에서 일치.
 - **미해결 확인거리:** GitHub Pages 소스가 `/docs`인지(T7 S7에서 확인) · V-World 도메인 허용(T7 S5 폴백).
+
+---
+
+## 실행 현황 & 이어서 할 일 (2026-07-09, 세션 인계)
+
+**브랜치:** `feat/gps-azure-routing` (아직 main 미머지). 이 브랜치를 origin에 push함.
+
+**완료(T1~T6):**
+- T1 payload 직렬화 공용화 + 테스트 / T2 `gps_map_payload` 라이브 검증 + dest 분기 테스트 /
+  T3 FastAPI 서버(+502 키유출 방지 수정) / T4 Dockerfile+.dockerignore / T5 프론트 GPS 배선 /
+  T6 로컬 E2E **통과**(실 GPS→서버→실경로 렌더).
+- **성능 수정(T6서 발견):** weather 15분 캐시+예보 raw 공용화(중복 제거)+`build_env_at` 병렬 /
+  서버 GPS 프로파일 1.5km. 콜드 45-63s→16-18s, 웜 ~1s. 전체 테스트 87 passed.
+- 프론트 타임아웃 75s·콜드 안내·라우트 수 동적 라벨.
+
+**Azure 리소스(이미 생성됨, 이 머신 az 로그인 유지):**
+- 구독 `Azure for Students` / 지역 `koreacentral`
+- RG `pawtrail-rg` · ACR `pawtrailacr2026uos` · env `pawtrail-env` · app `pawtrail-api`
+- 이미지 `pawtrailacr2026uos.azurecr.io/pawtrail-api:v1` (빌드 성공)
+- **FQDN:** `https://pawtrail-api.gentlefield-6f045711.koreacentral.azurecontainerapps.io`
+- min-replicas=1, 1cpu/2Gi, 시크릿(.env 키 5개) 주입, ALLOW_ORIGINS=*
+
+**⚠️ 현재 상태: 컨테이너 v1 크래시 중** — `engine/routing/graph_build.py:37`이 `scripts.fetch_songpa_graph`를
+모듈 레벨 import 하는데 Dockerfile v1이 `scripts/`를 COPY 안 함 → `ModuleNotFoundError: No module named 'scripts'`.
+**수정 반영됨:** Dockerfile에 `COPY scripts ./scripts` 추가(이 커밋). **이미지 재빌드는 아직 안 함.**
+
+**이어서 할 일(정확한 명령):**
+1. 이미지 재빌드(v2): `az acr build --registry pawtrailacr2026uos --image pawtrail-api:v2 --file server/Dockerfile .`
+2. 앱 갱신: `az containerapp update -n pawtrail-api -g pawtrail-rg --image pawtrailacr2026uos.azurecr.io/pawtrail-api:v2`
+3. 스모크: `curl https://<FQDN>/api/health` → ok / `curl "https://<FQDN>/api/route?lat=37.5663&lon=126.9779"` (콜드 ~30-45s).
+   실패 시 `az containerapp logs show -n pawtrail-api -g pawtrail-rg --tail 100 --type console`.
+4. 프론트 FQDN 빌드+배포: `API_BASE="https://<FQDN>" .venv/bin/python scripts/make_app.py` → docs/app 커밋.
+5. 최종 whole-branch 리뷰(superpowers:requesting-code-review) — weather.py 캐시/병렬 동시성·make_app.py diff 중점.
+6. **main 머지 + push**(GitHub Pages가 서빙하는 브랜치라야 라이브 갱신). Pages 소스가 `/docs`인지 확인.
+7. V-World: 그늘 저하 시 콘솔에 `*.azurecontainerapps.io` 도메인 추가.
+8. **발표 후 크레딧 절약:** `az containerapp update -n pawtrail-api -g pawtrail-rg --min-replicas 0` 또는 `az group delete -n pawtrail-rg`.
+
+**후속(범위 밖, task chip):** vworld.py 예외 시 키 URL 유출 방지(심층방어) · engine→scripts 결합 정리 · no-dest GPS 멀티 루트 변형.
+
+**SDD 원장(머신 로컬):** `.superpowers/sdd/progress.md` — 태스크별 커밋 SHA·리뷰 결과 기록.
