@@ -552,9 +552,13 @@ function persistProfile(){try{localStorage.setItem(PKEY,JSON.stringify(PROFILE))
 
 // ================= 게임화(개껌·댕꾸·상점) =================
 const GKEY='pawtrail_game';
-let GAME={coins:1000,owned:{},breed:'maltese',outfit:null};
+const DEMO_COINS=3000;   // 상점 데모용 시작 개껌(옷 6종 합 1500보다 넉넉하게)
+let GAME={coins:DEMO_COINS,owned:{},breed:'maltese',outfit:null};
 function loadGame(){try{const j=localStorage.getItem(GKEY);if(j)GAME=Object.assign(GAME,JSON.parse(j));}catch(e){}}
 function saveGame(){try{localStorage.setItem(GKEY,JSON.stringify(GAME));}catch(e){}}
+// 상점 데모용 리셋: 로드할 때마다 개껌을 가득 채우고 산 옷(owned·착용)을 비운다. 견종 선택은 보존.
+// 발표 재시연 때 매번 '옷 0개·개껌 넉넉' 클린 상태에서 구매 시연이 되도록.
+function resetShopDemo(){GAME.coins=DEMO_COINS;GAME.owned={};GAME.outfit=null;saveGame();}
 
 // ================= 산책 기록(localStorage 영속) — 걸었던 루트 저장·조회 =================
 const WKEY='pawtrail.walks';
@@ -1169,6 +1173,7 @@ function initDogCanvas(){
 // ================= 부팅 =================
 loadProfile();
 loadGame();
+resetShopDemo();          // 상점 데모: 매 로드마다 개껌 가득·옷 초기화(견종은 유지)
 loadWalks();
 seedDemoWalks();          // 기록 비어있으면 발표용 예시 5건 시드(있으면 건너뜀)
 resolveEmoji();
